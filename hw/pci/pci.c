@@ -1094,12 +1094,12 @@ static PCIDevice *do_pci_register_device(PCIDevice *pci_dev,
     bool is_bridge = IS_PCI_BRIDGE(pci_dev);
 
     /* Only pci bridges can be attached to extra PCI root buses */
-    if (pci_bus_is_root(bus) && bus->parent_dev && !is_bridge) {
-        error_setg(errp,
-                   "PCI: Only PCI/PCIe bridges can be plugged into %s",
-                    bus->parent_dev->name);
-        return NULL;
-    }
+    // if (pci_bus_is_root(bus) && bus->parent_dev && !is_bridge) {
+    //     error_setg(errp,
+    //                "PCI: Only PCI/PCIe bridges can be plugged into %s",
+    //                 bus->parent_dev->name);
+    //     return NULL;
+    // }
 
     if (devfn < 0) {
         for(devfn = bus->devfn_min ; devfn < ARRAY_SIZE(bus->devices);
