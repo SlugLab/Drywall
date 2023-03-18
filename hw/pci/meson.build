@@ -21,3 +21,4 @@ softmmu_ss.add_all(when: 'CONFIG_PCI', if_true: pci_ss)
 
 softmmu_ss.add(when: 'CONFIG_PCI', if_false: files('pci-stub.c'))
 softmmu_ss.add(when: 'CONFIG_ALL', if_true: files('pci-stub.c'))
+softmmu_ss.add(when: 'CONFIG_VIRTIO_CRYPTO_CXL', if_true: files('cxl-type1.c'))

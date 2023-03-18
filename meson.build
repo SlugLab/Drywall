@@ -365,6 +365,9 @@ have_vhost_kernel = get_option('vhost_kernel') \
 have_vhost_user_crypto = get_option('vhost_crypto') \
   .require(have_vhost_user,
            error_message: 'vhost-crypto requires vhost-user to be enabled').allowed()
+have_vhost_user_crypto_cxl = get_option('vhost_crypto_cxl') \
+  .require(have_vhost_user,
+           error_message: 'vhost-crypto requires cxl vhost-user to be enabled').allowed()
 
 have_vhost = have_vhost_user or have_vhost_vdpa or have_vhost_kernel
 
@@ -1891,6 +1894,7 @@ config_host_data.set('CONFIG_VHOST_NET_VDPA', have_vhost_net_vdpa)
 config_host_data.set('CONFIG_VHOST_KERNEL', have_vhost_kernel)
 config_host_data.set('CONFIG_VHOST_USER', have_vhost_user)
 config_host_data.set('CONFIG_VHOST_CRYPTO', have_vhost_user_crypto)
+config_host_data.set('CONFIG_VHOST_CRYPTO_CXL', have_vhost_user_crypto_cxl)
 config_host_data.set('CONFIG_VHOST_VDPA', have_vhost_vdpa)
 config_host_data.set('CONFIG_VMNET', vmnet.found())
 config_host_data.set('CONFIG_VHOST_USER_BLK_SERVER', have_vhost_user_blk_server)
@@ -3732,6 +3736,7 @@ summary_info += {'vhost-kernel support': have_vhost_kernel}
 summary_info += {'vhost-net support': have_vhost_net}
 summary_info += {'vhost-user support': have_vhost_user}
 summary_info += {'vhost-user-crypto support': have_vhost_user_crypto}
+summary_info += {'vhost-user-crypto-cxl support': have_vhost_user_crypto_cxl}
 summary_info += {'vhost-user-blk server support': have_vhost_user_blk_server}
 summary_info += {'vhost-vdpa support': have_vhost_vdpa}
 summary_info += {'build guest agent': have_ga}

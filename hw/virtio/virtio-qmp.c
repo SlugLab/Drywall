@@ -408,7 +408,7 @@ static const qmp_virtio_feature_map_t virtio_balloon_feature_map[] = {
 #endif
 
 /* virtio-crypto features mapping */
-#ifdef CONFIG_VIRTIO_CRYPTO
+#if defined CONFIG_VIRTIO_CRYPTO || defined CONFIG_VIRTIO_CRYPTO_CXL
 static const qmp_virtio_feature_map_t virtio_crypto_feature_map[] = {
     FEATURE_ENTRY(VHOST_F_LOG_ALL, \
             "VHOST_F_LOG_ALL: Logging write descriptors supported"),
@@ -600,7 +600,7 @@ VirtioDeviceFeatures *qmp_decode_features(uint16_t device_id, uint64_t bitmap)
             CONVERT_FEATURES(strList, virtio_vsock_feature_map, 0, bitmap);
         break;
 #endif
-#ifdef CONFIG_VIRTIO_CRYPTO
+#if defined CONFIG_VIRTIO_CRYPTO || defined CONFIG_VIRTIO_CRYPTO_CXL
     case VIRTIO_ID_CRYPTO:
         features->dev_features =
             CONVERT_FEATURES(strList, virtio_crypto_feature_map, 0, bitmap);

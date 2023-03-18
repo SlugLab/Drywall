@@ -232,6 +232,40 @@ REG64(CXL_MEM_DEV_STS, 0)
     FIELD(CXL_MEM_DEV_STS, MBOX_READY, 4, 1)
     FIELD(CXL_MEM_DEV_STS, RESET_NEEDED, 5, 3)
 
+struct CXLType1Dev {
+    /* Private */
+    PCIDevice parent_obj;
+
+    /* Properties */
+    CXLCacheRegion *cache_regions;
+    HostMemoryBackend *hostmem;
+    HostMemoryBackend *lsa;
+    uint64_t sn;
+
+    /* State */
+    AddressSpace hostmem_as;
+    CXLComponentState cxl_cstate;
+    CXLDeviceState cxl_dstate;
+
+    /* DOE */
+    DOECap doe_cdat;
+};
+
+#define TYPE_CXL_TYPE1 "cxl-type1"
+OBJECT_DECLARE_TYPE(CXLType1Dev, CXLType1Class, CXL_TYPE1)
+struct CXLType1Class {
+    /* Private */
+    PCIDeviceClass parent_class;
+
+    /* public */
+    uint64_t (*get_lsa_size)(CXLType1Dev *ct1d);
+
+    uint64_t (*get_lsa)(CXLType1Dev *ct1d, void *buf, uint64_t size,
+                        uint64_t offset);
+    void (*set_lsa)(CXLType1Dev *ct1d, const void *buf, uint64_t size,
+                    uint64_t offset);
+};
+
 struct CXLType3Dev {
     /* Private */
     PCIDevice parent_obj;

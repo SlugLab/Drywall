@@ -262,6 +262,8 @@ option('vhost_user', type: 'feature', value: 'auto',
        description: 'vhost-user backend support')
 option('vhost_crypto', type: 'feature', value: 'auto',
        description: 'vhost-user crypto backend support')
+option('vhost_crypto_cxl', type: 'feature', value: 'auto',
+       description: 'vhost-user cxl crypto backend support')
 option('vhost_vdpa', type: 'feature', value: 'auto',
        description: 'vhost-vdpa kernel backend support')
 option('vhost_user_blk_server', type: 'feature', value: 'auto',

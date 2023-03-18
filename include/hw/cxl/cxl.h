@@ -25,6 +25,30 @@
 
 typedef struct PXBDev PXBDev;
 
+typedef struct CXLCacheD2HReq {
+    uint8_t data[8];
+} CXLCacheD2HReq;
+
+enum CXLCacheState{
+    M,
+    E,
+    S,
+    I
+};
+
+typedef struct CXLCache {
+    uint8_t data[8];
+    enum CXLCacheState state;
+    bool ats;
+} CXLCache;
+// static_assert(sizeof(CXLCache) == 512, "CXLCache size is incorrect");
+
+struct CXLCacheRegion {
+    uint64_t size;
+    uint64_t base;
+    CXLCache *cache;
+} ;
+
 typedef struct CXLFixedWindow {
     uint64_t size;
     char **targets;

@@ -28,9 +28,9 @@ typedef struct VirtIOCryptoPCI VirtIOCryptoPCI;
 /*
  * virtio-crypto-pci: This extends VirtioPCIProxy.
  */
-#define TYPE_VIRTIO_CRYPTO_PCI "virtio-crypto-pci"
+#define TYPE_VIRTIO_CRYPTO_CXL "virtio-crypto-cxl"
 DECLARE_INSTANCE_CHECKER(VirtIOCryptoPCI, VIRTIO_CRYPTO_PCI,
-                         TYPE_VIRTIO_CRYPTO_PCI)
+                         TYPE_VIRTIO_CRYPTO_CXL)
 
 struct VirtIOCryptoPCI {
     VirtIOPCIProxy parent_obj;
@@ -81,7 +81,7 @@ static void virtio_crypto_initfn(Object *obj)
 }
 
 static const VirtioPCIDeviceTypeInfo virtio_crypto_pci_info = {
-    .generic_name  = TYPE_VIRTIO_CRYPTO_PCI,
+    .generic_name  = TYPE_VIRTIO_CRYPTO_CXL,
     .instance_size = sizeof(VirtIOCryptoPCI),
     .instance_init = virtio_crypto_initfn,
     .class_init    = virtio_crypto_pci_class_init,

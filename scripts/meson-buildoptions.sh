@@ -49,7 +49,7 @@ meson_options_help() {
   printf "%s\n" '  --includedir=VALUE       Header file directory [include]'
   printf "%s\n" '  --interp-prefix=VALUE    where to find shared libraries etc., use %M for'
   printf "%s\n" '                           cpu name [/usr/gnemul/qemu-%M]'
-  printf "%s\n" '  --libdir=VALUE           Library directory [lib64]'
+  printf "%s\n" '  --libdir=VALUE           Library directory [lib/x86_64-linux-gnu]'
   printf "%s\n" '  --libexecdir=VALUE       Library executable directory [libexec]'
   printf "%s\n" '  --localedir=VALUE        Locale data directory [share/locale]'
   printf "%s\n" '  --localstatedir=VALUE    Localstate data directory [/var/local]'
@@ -165,6 +165,8 @@ meson_options_help() {
   printf "%s\n" '  vfio-user-server'
   printf "%s\n" '                  vfio-user server support'
   printf "%s\n" '  vhost-crypto    vhost-user crypto backend support'
+  printf "%s\n" '  vhost-crypto-cxl'
+  printf "%s\n" '                  vhost-user cxl crypto backend support'
   printf "%s\n" '  vhost-kernel    vhost kernel backend support'
   printf "%s\n" '  vhost-net       vhost-net kernel acceleration support'
   printf "%s\n" '  vhost-user      vhost-user backend support'
@@ -441,6 +443,8 @@ _meson_option_parse() {
     --disable-vfio-user-server) printf "%s" -Dvfio_user_server=disabled ;;
     --enable-vhost-crypto) printf "%s" -Dvhost_crypto=enabled ;;
     --disable-vhost-crypto) printf "%s" -Dvhost_crypto=disabled ;;
+    --enable-vhost-crypto-cxl) printf "%s" -Dvhost_crypto_cxl=enabled ;;
+    --disable-vhost-crypto-cxl) printf "%s" -Dvhost_crypto_cxl=disabled ;;
     --enable-vhost-kernel) printf "%s" -Dvhost_kernel=enabled ;;
     --disable-vhost-kernel) printf "%s" -Dvhost_kernel=disabled ;;
     --enable-vhost-net) printf "%s" -Dvhost_net=enabled ;;

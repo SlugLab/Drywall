@@ -132,6 +132,7 @@ ERROR_RULE_LIST = [
     {'device':'virtio-crypto-ccw', 'expected':True},       # 'cryptodev' parameter expects a valid object
     {'device':'virtio-crypto-device', 'expected':True},    # 'cryptodev' parameter expects a valid object
     {'device':'virtio-crypto-pci', 'expected':True},       # 'cryptodev' parameter expects a valid object
+    {'device':'virtio-crypto-cxl', 'expected':True},       # 'cryptodev' parameter expects a valid object
     {'device':'virtio-input-host-device', 'expected':True}, # evdev property is required
     {'device':'virtio-input-host-pci', 'expected':True},   # evdev property is required
     {'device':'xen-pvdevice', 'expected':True},            # Device ID invalid, it must always be supplied

@@ -30,6 +30,11 @@ config VIRTIO_BALLOON
     default y
     depends on VIRTIO
 
+config VIRTIO_CRYPTO_CXL
+    bool
+    default y
+    depends on VIRTIO
+
 config VIRTIO_CRYPTO
     bool
     default y
