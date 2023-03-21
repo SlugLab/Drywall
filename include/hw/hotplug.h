@@ -58,6 +58,7 @@ struct HotplugHandlerClass {
     hotplug_fn plug;
     hotplug_fn unplug_request;
     hotplug_fn unplug;
+    bool (*is_hotpluggable_bus)(HotplugHandler *plug_handler, BusState *bus);
 };
 
 /**
