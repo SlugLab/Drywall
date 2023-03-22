@@ -53,8 +53,11 @@
 #include "qom/object_interfaces.h"
 #include "qemu/cutils.h"
 #include "qemu/error-report.h"
+#include "exec/ramlist.h"
+#include "exec/memory.h"
 #include "hw/core/cpu.h"
 #include "hw/intc/intc.h"
+#include "migration/ram.h"
 #include "migration/snapshot.h"
 #include "migration/misc.h"
 
@@ -1163,7 +1166,7 @@ void hmp_dirty_log_start(Monitor *mon, const QDict *qdict)
 
     WITH_RCU_READ_LOCK_GUARD() {
         // ram_list_init_bitmaps();
-        memory_global_dirty_log_start();
+        memory_global_dirty_log_start(GLOBAL_DIRTY_MIGRATION);
     }
     qemu_mutex_unlock_ramlist();
     // qemu_mutex_unlock_iothread();

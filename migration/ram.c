@@ -64,6 +64,9 @@
 #include "qemu/userfaultfd.h"
 #endif /* defined(__linux__) */
 
+#include "sysemu/kvm.h"
+#include "monitor/monitor-internal.h"
+
 /***********************************************************/
 /* ram save/restore */
 
@@ -4632,4 +4635,241 @@ void ram_mig_init(void)
     qemu_mutex_init(&XBZRLE.lock);
     register_savevm_live("ram", 0, 4, &savevm_ram_handlers, &ram_state);
     ram_block_notifier_add(&ram_mig_ram_notifier);
+}
+
+uint64_t count = 0;
+
+static struct
+{
+    PageCache *cache;
+    uint8_t *encoded_buf;
+} FULLPAGE_CACHE;
+
+static struct
+{
+    PageCache *cache;
+    uint8_t *encoded_buf;
+} SUBPAGE_CACHE;
+
+void mycache_init(void)
+{
+    PageCache *new_cache;
+    // new_cache = cache_init(1024*1024*256, 0x80, NULL);
+    // SUBPAGE_CACHE.cache = new_cache;
+    new_cache = cache_init(1024 * 1024 * 512, TARGET_PAGE_SIZE, NULL);
+    FULLPAGE_CACHE.cache = new_cache;
+
+    // SUBPAGE_CACHE.encoded_buf = g_try_malloc0(0x80);
+    FULLPAGE_CACHE.encoded_buf = g_try_malloc0(TARGET_PAGE_SIZE);
+}
+
+static __inline__ unsigned long long rdtsc(void)
+{
+    unsigned hi, lo;
+    __asm__ __volatile__("rdtsc"
+                         : "=a"(lo), "=d"(hi));
+    return ((unsigned long long)lo) | (((unsigned long long)hi) << 32);
+}
+
+unsigned long long encode_total;
+
+static int calc_xbzrle(Monitor *mon, uint8_t *p, ram_addr_t offset, bool subpage)
+{
+    ram_addr_t size = 0;
+    uint8_t *prev_cached_page;
+    unsigned long long encode_start, encode_end;
+    if (subpage)
+    {
+        if (!cache_is_cached(SUBPAGE_CACHE.cache, offset, count))
+        {
+            cache_insert(SUBPAGE_CACHE.cache, offset, p, count);
+            return -1;
+        }
+        prev_cached_page = get_cached_data(SUBPAGE_CACHE.cache, offset);
+        size = xbzrle_encode_buffer(prev_cached_page, p,
+                                    0x80, SUBPAGE_CACHE.encoded_buf,
+                                    0x80);
+        if (size != 0)
+        {
+            memcpy(prev_cached_page, p, 0x80);
+        }
+    }
+    else
+    {
+        if (!cache_is_cached(FULLPAGE_CACHE.cache, offset, count))
+        {
+            cache_insert(FULLPAGE_CACHE.cache, offset, p, count);
+            return -1;
+        }
+        prev_cached_page = get_cached_data(FULLPAGE_CACHE.cache, offset);
+        encode_start = rdtsc();
+        size = xbzrle_encode_buffer(prev_cached_page, p,
+                                    TARGET_PAGE_SIZE, FULLPAGE_CACHE.encoded_buf,
+                                    TARGET_PAGE_SIZE);
+        encode_end = rdtsc();
+        encode_total += encode_end - encode_start;
+        if (size != 0)
+        {
+            memcpy(prev_cached_page, p, TARGET_PAGE_SIZE);
+        }
+    }
+
+    return size;
+}
+
+void ram_walk_blocks(Monitor *mon, bool subpage, bool compress, bool xbzrle)
+{
+    RAMBlock *block;
+    ram_addr_t total = 0;
+    ram_addr_t block_total;
+    ram_addr_t actual_memory = 0;
+    ram_addr_t offset;
+    int size;
+    uint8_t *p;
+    int ret;
+    int i;
+    __u32 access_map[SUBPAGE_MAX_BITMAP];
+    __u32 target_bit;
+    int spp;
+    int cachehit = 0;
+    int nonzeropage = 0;
+    monitor_printf(mon, "%ld %d %d %d\n", count, subpage, compress, xbzrle);
+    count++;
+    unsigned long long start, end;
+    struct timespec start_ts, end_ts;
+    start = rdtsc();
+    clock_gettime(CLOCK_MONOTONIC, &start_ts);
+    monitor_printf(mon, "start:    %10ld.%09ld\n", start_ts.tv_sec, start_ts.tv_nsec);
+    encode_total = 0;
+
+    WITH_RCU_READ_LOCK_GUARD()
+    {
+        RAMBLOCK_FOREACH_MIGRATABLE(block)
+        {
+            if (strcmp("pc.ram", block->idstr) == 0)
+            {
+                block_total = 0;
+                for (offset = 0; offset < block->used_length; offset += TARGET_PAGE_SIZE * SUBPAGE_MAX_BITMAP)
+                {
+                    p = block->host + offset;
+
+                    if (count == 1)
+                    {
+                        ret = 1;
+                        for (i = 0; i < SUBPAGE_MAX_BITMAP; i++)
+                            access_map[i] = 0xffff;
+                    }
+                    else
+                    {
+                        ret = kvm_getspp_with_gfn((long long unsigned int)offset >> 12, SUBPAGE_MAX_BITMAP, access_map);
+                    }
+                    // for debug
+                    // ret = 1;
+                    // for(i=0;i<SUBPAGE_MAX_BITMAP;i++)
+                    //     access_map[i] = 0xffff;
+
+                    if (ret > 0)
+                    {
+                        for (i = 0; i < SUBPAGE_MAX_BITMAP; i++)
+                        {
+                            if (subpage && access_map[i] != 0xffff)
+                            {
+                                spp = 0;
+                                target_bit = 1;
+                                while (target_bit)
+                                {
+                                    if (access_map[i] & target_bit)
+                                    {
+                                        if (buffer_is_zero(p + TARGET_PAGE_SIZE * i + 0x80 * spp, 0x80))
+                                        {
+                                            block_total += 10;
+                                            target_bit <<= 1;
+                                            spp++;
+                                            continue;
+                                        }
+                                        actual_memory += 0x8a;
+                                        if (xbzrle)
+                                        {
+                                            size = calc_xbzrle(mon, p + TARGET_PAGE_SIZE * i + 0x80 * spp, offset + TARGET_PAGE_SIZE * i + 0x80 * spp, true);
+                                            if (size >= 0)
+                                            {
+                                                block_total += 11 + size;
+                                                target_bit <<= 1;
+                                                spp++;
+                                                continue;
+                                            }
+                                        }
+                                        if (compress)
+                                        {
+                                            uLong destLen = compressBound(0x80);
+                                            Bytef *dest = (Bytef *)g_try_malloc0(destLen);
+                                            ret = compress2(dest, &destLen, p + TARGET_PAGE_SIZE * i + 0x80 * spp, 0x80, 1);
+                                            free(dest);
+                                            if (ret == Z_OK && destLen < 0x80)
+                                            {
+                                                block_total += 9 + 4 + destLen;
+                                                target_bit <<= 1;
+                                                spp++;
+                                                continue;
+                                            }
+                                        }
+                                        block_total += 9 + 0x80;
+                                    }
+                                    target_bit <<= 1;
+                                    spp++;
+                                }
+                            }
+                            else
+                            {
+                                if (access_map[i])
+                                {
+                                    if (buffer_is_zero(p + TARGET_PAGE_SIZE * i, TARGET_PAGE_SIZE))
+                                    {
+                                        block_total += 9;
+                                        continue;
+                                    }
+                                    actual_memory += 8 + TARGET_PAGE_SIZE;
+                                    if (xbzrle)
+                                    {
+                                        nonzeropage++;
+                                        size = calc_xbzrle(mon, p + TARGET_PAGE_SIZE * i, offset + TARGET_PAGE_SIZE * i, false);
+                                        if (size >= 0)
+                                        {
+                                            block_total += 10 + size;
+                                            cachehit++;
+                                            continue;
+                                        }
+                                    }
+                                    if (compress)
+                                    {
+                                        uLong destLen = compressBound(TARGET_PAGE_SIZE);
+                                        Bytef *dest = (Bytef *)g_try_malloc0(destLen);
+                                        ret = compress2(dest, &destLen, p + TARGET_PAGE_SIZE * i, TARGET_PAGE_SIZE, 1);
+                                        free(dest);
+                                        if (ret == Z_OK && destLen < TARGET_PAGE_SIZE)
+                                        {
+                                            block_total += 8 + 4 + destLen;
+                                            continue;
+                                        }
+                                    }
+                                    block_total += 8 + TARGET_PAGE_SIZE;
+                                }
+                            }
+                        }
+                    }
+                }
+                monitor_printf(mon, "%s: 0x%lx / 0x%lx\n", block->idstr, block_total, block->used_length);
+                total += block_total;
+            }
+        }
+    }
+    end = rdtsc();
+    clock_gettime(CLOCK_MONOTONIC, &end_ts);
+    monitor_printf(mon, "end  :    %10ld.%09ld\n", end_ts.tv_sec, end_ts.tv_nsec);
+    if (xbzrle)
+        monitor_printf(mon, "cache hit: %d/%d\n", cachehit, nonzeropage);
+    monitor_printf(mon, "for encode: %llu\n", encode_total);
+    monitor_printf(mon, "%llu\n", end - start);
+    monitor_printf(mon, "0x%lx\n", actual_memory);
+    monitor_printf(mon, "0x%lx\n", total);
 }

@@ -51,6 +51,7 @@
 
 #include "hw/boards.h"
 #include "monitor/stats.h"
+#include "monitor/monitor-internal.h"
 
 /* This check must be after config-host.h is included */
 #ifdef CONFIG_EVENTFD
@@ -2439,14 +2440,13 @@ void kvm_setspp_all(KVMState *s)
 
 void kvm_sppon(Monitor *mon)
 {
-    MachineState *ms = MACHINE(qdev_get_machine());
-    KVMState *s = KVM_STATE(current_accel());
     int ret;
-    DPRINTF(mon, "ms->spp: %d\n", ms->spp);
-    DPRINTF(mon, "KVM_CAP_X86_SPP: %d\n", KVM_CAP_X86_SPP);
-    if (ms->spp && kvm_vm_check_extension(s, KVM_CAP_X86_SPP)) {
+    KVMState *s = KVM_STATE(current_accel());
+    monitor_printf(mon, "ms->spp: default is open.");
+    monitor_printf(mon, "KVM_CAP_X86_SPP: %d\n", KVM_CAP_X86_SPP);
+    if (kvm_vm_check_extension(s, KVM_CAP_X86_SPP)) {
         ret = kvm_vm_enable_cap(s, KVM_CAP_X86_SPP, 0);
-        DPRINTF(mon, "result: %d\n", ret);
+        monitor_printf(mon, "result: %d\n", ret);
     }
     return;
 }
@@ -2459,10 +2459,10 @@ void kvm_get_dirty_size(Monitor *mon)
     ret = kvm_vm_ioctl(s, KVM_GET_DIRTY_SIZE, &dirty_size);
     if (ret)
     {
-        DPRINTF(mon, "ioctl KVM_GET_DIRTY_SIZE: %d\n", ret);
+        monitor_printf(mon, "ioctl KVM_GET_DIRTY_SIZE: %d\n", ret);
         return;
     }
-    DPRINTF(mon, "0x%lx\n", dirty_size);
+    monitor_printf(mon, "0x%lx\n", dirty_size);
     return;
 }
 

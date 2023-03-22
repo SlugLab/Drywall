@@ -46,18 +46,6 @@ void hmp_block_passwd(Monitor *mon, const QDict *qdict);
 void hmp_block_set_io_throttle(Monitor *mon, const QDict *qdict);
 void hmp_eject(Monitor *mon, const QDict *qdict);
 
-// void hmp_get_clocks_in_guest(Monitor *mon, const QDict *qdict);
-// void hmp_get_clocks_of_host(Monitor *mon, const QDict *qdict);
-// void hmp_get_spp_violation_count(Monitor *mon, const QDict *qdict);
-// void hmp_get_spp_misconfig_count(Monitor *mon, const QDict *qdict);
-// void hmp_dirty_log_start(Monitor *mon, const QDict *qdict);
-// void hmp_spp_dirty_log_start(Monitor *mon, const QDict *qdict);
-// void hmp_sppon(Monitor *mon, const QDict *qdict);
-// void hmp_get_iteration_size(Monitor *mon, const QDict *qdict);
-// void hmp_init_mycache(Monitor *mon, const QDict *qdict);
-// void hmp_get_dirty_size(Monitor *mon, const QDict *qdict);
-
-// void hmp_run_for_instruction(Monitor *mon, const QDict *qdict);
 void hmp_qemu_io(Monitor *mon, const QDict *qdict);
 
 void hmp_info_block(Monitor *mon, const QDict *qdict);

@@ -113,5 +113,7 @@ int ram_write_tracking_start(void);
 void ram_write_tracking_stop(void);
 
 void dirty_sync_missed_zero_copy(void);
+void mycache_init(void);
+void ram_walk_blocks(Monitor *mon, bool subpage, bool compress, bool xbzrle);
 
 #endif
