@@ -914,7 +914,136 @@ ERST
         .cmd        = hmp_migrate,
     },
 
+SRST
+``spp_dirty_log_start``
+  record the spp dirty log
+ERST
 
+    {
+        .name       = "spp_dirty_log_start",
+        .args_type  = "",
+        .params     = "",
+        .help       = "call spp_dirty_log_start()",
+        .cmd        = hmp_spp_dirty_log_start,
+    },
+
+SRST
+``sppon``
+  switch on the spp
+ERST
+
+    {
+        .name       = "sppon",
+        .args_type  = "",
+        .params     = "",
+        .help       = "start spp",
+        .cmd        = hmp_sppon,
+    },
+
+SRST
+``init_mycache``
+  init the cache
+ERST
+
+    {
+        .name       = "init_mycache",
+        .args_type  = "",
+        .params     = "",
+        .help       = "init_mycache",
+        .cmd        = hmp_init_mycache,
+    },
+
+SRST
+``get_iteration_size``
+  get the iteration size
+ERST
+
+    {
+        .name       = "get_iteration_size",
+        .args_type  = "subpage:b,compress:b,xbzrle:b",
+        .params     = "on|off on|off on|off",
+        .help       = "get iteration size",
+        .cmd        = hmp_get_iteration_size,
+    },
+
+SRST
+``get_iteration_size``
+  get the iteration size
+ERST
+
+    {
+        .name       = "get_dirty_size",
+        .args_type  = "",
+        .params     = "",
+        .help       = "get dirty size",
+        .cmd        = hmp_get_dirty_size,
+    },
+
+SRST
+``get_clocks_in_guest``
+  get clocks in guest
+ERST
+
+    {
+        .name       = "get_clocks_in_guest",
+        .args_type  = "",
+        .params     = "",
+        .help       = "get clocks in guest",
+        .cmd        = hmp_get_clocks_in_guest,
+    },
+
+SRST
+``get_clocks_of_host``
+  get clocks of host
+ERST
+
+    {
+        .name       = "get_clocks_of_host",
+        .args_type  = "",
+        .params     = "",
+        .help       = "get clocks in guest",
+        .cmd        = hmp_get_clocks_of_host,
+    },
+
+SRST
+``get_clocks_of_host``
+  get clocks of host
+ERST
+
+    {
+        .name       = "get_spp_violation_count",
+        .args_type  = "",
+        .params     = "",
+        .help       = "get spp violation count ",
+        .cmd        = hmp_get_spp_violation_count,
+    },
+
+SRST
+``get_spp_misconfig_count``
+  get spp misconfig count
+ERST
+
+    {
+        .name       = "get_spp_misconfig_count",
+        .args_type  = "",
+        .params     = "",
+        .help       = "get spp misconfig count",
+        .cmd        = hmp_get_spp_misconfig_count,
+    },
+    
+SRST
+``run_for_instruction``
+  run for instruction
+ERST
+
+    {
+        .name       = "run_for_instruction",
+        .args_type  = "instruction:i",
+        .params     = "instruction",
+        .help       = "run vm for given instruction",
+        .cmd        = hmp_run_for_instruction,
+    },
+    
 SRST
 ``migrate [-d] [-b] [-i]`` *uri*
   Migrate to *uri* (using -d to not wait for completion).

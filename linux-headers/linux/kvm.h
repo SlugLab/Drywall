@@ -272,6 +272,8 @@ struct kvm_xen_exit {
 #define KVM_EXIT_RISCV_SBI        35
 #define KVM_EXIT_RISCV_CSR        36
 #define KVM_EXIT_NOTIFY           37
+#define KVM_EXIT_SPP              38
+#define KVM_EXIT_SPP_LOG_FULL     39
 
 /* For KVM_EXIT_INTERNAL_ERROR */
 /* Emulate instruction failed. */
@@ -649,6 +651,16 @@ struct kvm_vapic_addr {
 };
 
 /* for KVM_SET_MP_STATE */
+
+/* for KVM_SUBPAGES_GET_ACCESS and KVM_SUBPAGES_SET_ACCESS */
+#define SUBPAGE_MAX_BITMAP 512
+/* for KVM_SUBPAGES_GET_ACCESS and KVM_SUBPAGES_SET_ACCESS */
+struct kvm_subpage {
+	__u64 gfn_base; /* the first page gfn of the contiguous pages */
+	__u32 npages;   /* number of 4K pages */
+	__u32 flags;    /* reserved to 0 now */
+	__u32 access_map[SUBPAGE_MAX_BITMAP]; /* start place of bitmap array */
+};
 
 /* not all states are valid on all architectures */
 #define KVM_MP_STATE_RUNNABLE          0
@@ -1452,6 +1464,13 @@ struct kvm_vfio_spapr_tce {
 					struct kvm_userspace_memory_region)
 #define KVM_SET_TSS_ADDR          _IO(KVMIO,   0x47)
 #define KVM_SET_IDENTITY_MAP_ADDR _IOW(KVMIO,  0x48, __u64)
+#define KVM_SUBPAGES_GET_ACCESS  _IOR(KVMIO, 0x49, __u64)
+#define KVM_SUBPAGES_SET_ACCESS  _IOW(KVMIO, 0x4a, __u64)
+#define KVM_GET_SPP_LOG   _IOW(KVMIO,  0x4b, struct kvm_spp_log)
+#define KVM_GET_DIRTY_SIZE   _IOW(KVMIO,  0x4c, unsigned long)
+#define KVM_GET_CLOCKS_IN_GUEST   _IOW(KVMIO,  0x4d, unsigned long long)
+#define KVM_GET_SPP_VIOLATION_COUNT   _IOW(KVMIO,  0x4e, unsigned long long)
+#define KVM_GET_SPP_MISCONFIG_COUNT   _IOW(KVMIO,  0x4f, unsigned long long)
 
 /* enable ucontrol for s390 */
 struct kvm_s390_ucas_mapping {

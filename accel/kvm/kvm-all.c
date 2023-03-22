@@ -57,6 +57,11 @@
 #include <sys/eventfd.h>
 #endif
 
+#define KVM_CAP_X86_SPP 223
+#define KVM_CAP_X86_SPP_DIRTY_LOG 224
+
+#define KVM_SUBPAGE_MAX_PAGES   512
+
 /* KVM uses PAGE_SIZE in its definition of KVM_COALESCED_MMIO_MAX. We
  * need to use the real host PAGE_SIZE, as that's what KVM will use.
  */
@@ -2353,6 +2358,172 @@ static void query_stats_schemas_cb(StatsSchemaList **result, Error **errp);
 uint32_t kvm_dirty_ring_size(void)
 {
     return kvm_state->kvm_dirty_ring_size;
+}
+
+void kvm_spp_dirty_log_start(Monitor *mon)
+{
+    KVMState *s = KVM_STATE(current_accel());
+    // int ret;
+    // DPRINTF(mon, "spp_dirty_log_start\n");
+    // ret = kvm_vm_enable_cap(s, KVM_CAP_X86_SPP_DIRTY_LOG, 0);
+    // DPRINTF(mon, "result: %d\n", ret);
+    kvm_setspp_all(s);
+    return;
+}
+
+int kvm_getspp_with_gfn(__u64 gfn, __u64 npages, __u32 *access_map)
+{
+    KVMState *s = KVM_STATE(current_accel());
+    int ret;
+    int i;
+    struct kvm_subpage spp_info;
+    spp_info.gfn_base = gfn;
+    spp_info.npages = npages;
+    spp_info.flags = 0;
+    ret = kvm_vm_ioctl(s, KVM_SUBPAGES_GET_ACCESS, &spp_info);
+    if(ret == npages){
+        for(i=0;i<npages;i++){
+            access_map[i] = spp_info.access_map[i];
+        }
+    }
+
+    return ret;
+}
+
+int kvm_setspp_with_gfn(__u64 gfn, __u64 npages, __u32 *access_map)
+{
+    KVMState *s = KVM_STATE(current_accel());
+    int ret;
+    struct kvm_subpage spp_info;
+    spp_info.gfn_base = gfn;
+    spp_info.npages = npages;
+    spp_info.flags = 0;
+    for(int i = 0; i < npages; i++){
+        spp_info.access_map[i] = access_map[i];
+    }
+    ret = kvm_vm_ioctl(s, KVM_SUBPAGES_SET_ACCESS, &spp_info);
+
+    return ret;
+}
+
+void kvm_setspp(KVMState *s, hwaddr start_addr, ram_addr_t size)
+{
+    struct kvm_subpage spp_info;
+    __u64 gfn = start_addr >> 12;
+    __u64 npages = size >> 12;
+    for(int i = 0; i < SUBPAGE_MAX_BITMAP; i++){
+        // spp_info.access_map[i] = 0xffffffff;
+        spp_info.access_map[i] = 0x00000000;
+    }
+    for(int i = 0; i <= (npages - 1) / SUBPAGE_MAX_BITMAP; i++){
+        spp_info.gfn_base = gfn + i * SUBPAGE_MAX_BITMAP;
+        spp_info.npages = npages - i * SUBPAGE_MAX_BITMAP;
+        spp_info.flags = 0;
+        if(spp_info.npages > SUBPAGE_MAX_BITMAP){
+            spp_info.npages = SUBPAGE_MAX_BITMAP;
+        }
+        kvm_vm_ioctl(s, KVM_SUBPAGES_SET_ACCESS, &spp_info);
+    }
+}
+
+void kvm_setspp_all(KVMState *s)
+{
+    int i = 0;
+    while(true) {
+        if(s->memory_listener.slots[i].memory_size <= 0)
+            break;
+        kvm_setspp(s, s->memory_listener.slots[i].start_addr, s->memory_listener.slots[i].memory_size);
+        i++;
+    }
+}
+
+void kvm_sppon(Monitor *mon)
+{
+    MachineState *ms = MACHINE(qdev_get_machine());
+    KVMState *s = KVM_STATE(current_accel());
+    int ret;
+    DPRINTF(mon, "ms->spp: %d\n", ms->spp);
+    DPRINTF(mon, "KVM_CAP_X86_SPP: %d\n", KVM_CAP_X86_SPP);
+    if (ms->spp && kvm_vm_check_extension(s, KVM_CAP_X86_SPP)) {
+        ret = kvm_vm_enable_cap(s, KVM_CAP_X86_SPP, 0);
+        DPRINTF(mon, "result: %d\n", ret);
+    }
+    return;
+}
+
+void kvm_get_dirty_size(Monitor *mon)
+{
+    KVMState *s = KVM_STATE(current_accel());
+    unsigned long dirty_size;
+    int ret;
+    ret = kvm_vm_ioctl(s, KVM_GET_DIRTY_SIZE, &dirty_size);
+    if (ret)
+    {
+        DPRINTF(mon, "ioctl KVM_GET_DIRTY_SIZE: %d\n", ret);
+        return;
+    }
+    DPRINTF(mon, "0x%lx\n", dirty_size);
+    return;
+}
+
+void kvm_get_first_iteration_size(Monitor *mon)
+{
+    uint64_t first_iteration_size = 0;
+    int i = 0;
+    KVMState *s = KVM_STATE(current_accel());
+    while(true) {
+        if(s->memory_listener.slots[i].memory_size <= 0)
+            break;
+        DPRINTF(mon, "%d: 0x%lx : 0x%lx\n", i, s->memory_listener.slots[i].start_addr, s->memory_listener.slots[i].start_addr + s->memory_listener.slots[i].memory_size);
+        i++;
+        first_iteration_size += s->memory_listener.slots[i].memory_size;
+    }
+    DPRINTF(mon, "0x%lx\n", first_iteration_size);
+}
+
+void kvm_get_clocks_in_guest(Monitor *mon)
+{
+    KVMState *s = KVM_STATE(current_accel());
+    unsigned long long clocks_in_guest;
+    int ret;
+    ret = kvm_vm_ioctl(s, KVM_GET_CLOCKS_IN_GUEST, &clocks_in_guest);
+    if (ret)
+    {
+        DPRINTF(mon, "ioctl KVM_GET_CLOCK_IN_GUEST: %d\n", ret);
+        return;
+    }
+    DPRINTF(mon, "%llu\n", clocks_in_guest);
+    return;
+}
+
+void kvm_get_spp_violation_count(Monitor *mon)
+{
+    KVMState *s = KVM_STATE(current_accel());
+    unsigned long long spp_violation_count;
+    int ret;
+    ret = kvm_vm_ioctl(s, KVM_GET_SPP_VIOLATION_COUNT, &spp_violation_count);
+    if (ret)
+    {
+        DPRINTF(mon, "ioctl KVM_GET_SPPVIOLATIOIN_COUNT: %d\n", ret);
+        return;
+    }
+    DPRINTF(mon, "%llu\n", spp_violation_count);
+    return;
+}
+
+void kvm_get_spp_misconfig_count(Monitor *mon)
+{
+    KVMState *s = KVM_STATE(current_accel());
+    unsigned long long spp_misconfig_count;
+    int ret;
+    ret = kvm_vm_ioctl(s, KVM_GET_SPP_MISCONFIG_COUNT, &spp_misconfig_count);
+    if (ret)
+    {
+        DPRINTF(mon, "ioctl KVM_GET_SPP_MISCONFIG_COUNT: %d\n", ret);
+        return;
+    }
+    DPRINTF(mon, "%llu\n", spp_misconfig_count);
+    return;
 }
 
 static int kvm_init(MachineState *ms)

@@ -227,6 +227,17 @@ int kvm_has_many_ioeventfds(void);
 int kvm_has_gsi_routing(void);
 int kvm_has_intx_set_mask(void);
 
+void kvm_spp_dirty_log_start(Monitor *mon);
+int kvm_getspp_with_gfn(unsigned long long gfn, unsigned long long npages, unsigned int *access_map);
+int kvm_setspp_with_gfn(unsigned long long gfn, unsigned long long npages, unsigned int *access_map);
+void kvm_setspp(KVMState *s, hwaddr start_addr, ram_addr_t size);
+void kvm_setspp_all(KVMState *s);
+void kvm_sppon(Monitor *mon);
+void kvm_get_first_iteration_size(Monitor *mon);
+void kvm_get_dirty_size(Monitor *mon);
+void kvm_get_clocks_in_guest(Monitor *mon);
+void kvm_get_spp_violation_count(Monitor *mon);
+void kvm_get_spp_misconfig_count(Monitor *mon);
 /**
  * kvm_arm_supports_user_irq
  *
