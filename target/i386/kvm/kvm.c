@@ -4960,6 +4960,28 @@ static int kvm_handle_tpr_access(X86CPU *cpu)
     return 1;
 }
 
+#define SUBPAGE_ACCESS_DEFAULT   (0x0)
+#define SUBPAGE_ACCESS_FULL      (0xFFFFFFFF)
+
+static int kvm_handle_spp(X86CPU *cpu, __u64 addr, __u8 insn_len)
+{
+    unsigned int access_map[1];
+    __u64 gfn = addr >> 12;
+    __u64 subpage = (addr % 0x1000) / 0x80;
+    kvm_getspp_with_gfn(gfn, 1, access_map);
+
+    if(insn_len == 0xf) {
+        access_map[0] = 0xffffffff;
+    } else {
+        unsigned int new_access;
+        kvm_getspp_with_gfn(gfn, 1, access_map);
+        new_access = 1 << subpage;
+        access_map[0] |= new_access;
+    }
+    kvm_setspp_with_gfn(gfn, 1, access_map);
+    return 0;
+}
+
 int kvm_arch_insert_sw_breakpoint(CPUState *cs, struct kvm_sw_breakpoint *bp)
 {
     static const uint8_t int3 = 0xcc;
@@ -5298,8 +5320,10 @@ int kvm_arch_handle_exit(CPUState *cs, struct kvm_run *run)
     uint64_t code;
     int ret;
     bool ctx_invalid;
+    FILE *debug_file;
     char str[256];
-    KVMState *state;
+    KVMState *state = kvm_state;
+    struct kvm_spp_log spp_log[SPP_LOG_SIZE];
 
     switch (run->exit_reason) {
     case KVM_EXIT_HLT:
@@ -5379,6 +5403,23 @@ int kvm_arch_handle_exit(CPUState *cs, struct kvm_run *run)
         /* We only enable MSR filtering, any other exit is bogus */
         assert(run->msr.reason == KVM_MSR_EXIT_REASON_FILTER);
         ret = kvm_handle_wrmsr(cpu, run);
+        break;
+    case KVM_EXIT_SPP:
+        ret = kvm_handle_spp(cpu, run->spp.addr, run->spp.insn_len);
+        // set the memory afterwords
+        break;
+    case KVM_EXIT_SPP_LOG_FULL:
+        if (kvm_vm_ioctl(state, KVM_GET_SPP_LOG, &spp_log) == -1) {
+            DPRINTF("ioctl failed %d\n", errno);
+            ret = -1;
+            break;
+        }
+        debug_file = fopen("/tmp/spplog.csv", "a");
+        for(int i=0; i<SPP_LOG_SIZE; i++){
+            fprintf(debug_file, "%ld, %ld, %llu\n", spp_log[i].time.tv_sec, spp_log[i].time.tv_nsec, spp_log[i].subpage);
+        }
+        fclose(debug_file);
+        ret = 0;
         break;
     default:
         fprintf(stderr, "KVM: unknown exit reason %d\n", run->exit_reason);

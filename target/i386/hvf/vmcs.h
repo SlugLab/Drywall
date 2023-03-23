@@ -276,6 +276,7 @@
 #define EXIT_REASON_WBINVD 54
 #define EXIT_REASON_XSETBV 55
 #define EXIT_REASON_APIC_WRITE 56
+#define EXIT_REASON_SPP 66
 
 /*
  * NMI unblocking due to IRET.

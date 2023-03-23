@@ -471,6 +471,11 @@ struct kvm_run {
 		struct {
 			__u8 vector;
 		} eoi;
+		/* KVM_EXIT_SPP */
+		struct {
+			__u64 addr;
+			__u8 insn_len;
+		} spp;
 		/* KVM_EXIT_HYPERV */
 		struct kvm_hyperv_exit hyperv;
 		/* KVM_EXIT_ARM_NISV */
@@ -619,6 +624,13 @@ struct kvm_dirty_log {
 		void *dirty_bitmap; /* one bit per page */
 		__u64 padding2;
 	};
+};
+
+#define SPP_LOG_SIZE 512
+
+struct kvm_spp_log {
+	__u64 subpage;
+	struct timespec time;
 };
 
 /* for KVM_CLEAR_DIRTY_LOG */
@@ -1187,6 +1199,7 @@ struct kvm_ppc_resize_hpt {
 #define KVM_CAP_VM_DISABLE_NX_HUGE_PAGES 220
 #define KVM_CAP_S390_ZPCI_OP 221
 #define KVM_CAP_S390_CPU_TOPOLOGY 222
+#define KVM_CAP_X86_SPP 223
 
 #ifdef KVM_CAP_IRQ_ROUTING
 

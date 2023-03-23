@@ -23,16 +23,16 @@
 #include "qemu/module.h"
 #include "qom/object.h"
 
-typedef struct VirtIOCryptoPCI VirtIOCryptoPCI;
+typedef struct VirtIOCryptoCXL VirtIOCryptoCXL;
 // Todo CXL Type 1 wrapper ATS wrapper
 /*
  * virtio-crypto-pci: This extends VirtioPCIProxy.
  */
 #define TYPE_VIRTIO_CRYPTO_CXL "virtio-crypto-cxl"
-DECLARE_INSTANCE_CHECKER(VirtIOCryptoPCI, VIRTIO_CRYPTO_PCI,
+DECLARE_INSTANCE_CHECKER(VirtIOCryptoCXL, VIRTIO_CRYPTO_PCI,
                          TYPE_VIRTIO_CRYPTO_CXL)
 
-struct VirtIOCryptoPCI {
+struct VirtIOCryptoCXL {
     VirtIOPCIProxy parent_obj;
     VirtIOCrypto vdev;
 };
@@ -46,7 +46,7 @@ static Property virtio_crypto_pci_properties[] = {
 
 static void virtio_crypto_pci_realize(VirtIOPCIProxy *vpci_dev, Error **errp)
 {
-    VirtIOCryptoPCI *vcrypto = VIRTIO_CRYPTO_PCI(vpci_dev);
+    VirtIOCryptoCXL *vcrypto = VIRTIO_CRYPTO_PCI(vpci_dev);
     DeviceState *vdev = DEVICE(&vcrypto->vdev);
 
     if (vcrypto->vdev.conf.cryptodev == NULL) {
@@ -74,7 +74,7 @@ static void virtio_crypto_pci_class_init(ObjectClass *klass, void *data)
 
 static void virtio_crypto_initfn(Object *obj)
 {
-    VirtIOCryptoPCI *dev = VIRTIO_CRYPTO_PCI(obj);
+    VirtIOCryptoCXL *dev = VIRTIO_CRYPTO_PCI(obj);
 
     virtio_instance_init_common(obj, &dev->vdev, sizeof(dev->vdev),
                                 TYPE_VIRTIO_CRYPTO);
@@ -82,7 +82,7 @@ static void virtio_crypto_initfn(Object *obj)
 
 static const VirtioPCIDeviceTypeInfo virtio_crypto_pci_info = {
     .generic_name  = TYPE_VIRTIO_CRYPTO_CXL,
-    .instance_size = sizeof(VirtIOCryptoPCI),
+    .instance_size = sizeof(VirtIOCryptoCXL), // todo
     .instance_init = virtio_crypto_initfn,
     .class_init    = virtio_crypto_pci_class_init,
 };
