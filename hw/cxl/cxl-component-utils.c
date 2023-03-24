@@ -293,7 +293,7 @@ void cxl_component_create_dvsec(CXLComponentState *cxl,
            length - sizeof(DVSECHeader));
 
     /* Configure write masks */
-    switch (type) {
+        switch (type) {
     case PCIE_CXL_DEVICE_DVSEC:
         /* Cntrl RW Lock - so needs explicit blocking when lock is set */
         wmask[offset + offsetof(CXLDVSECDevice, ctrl)] = 0xFD;
