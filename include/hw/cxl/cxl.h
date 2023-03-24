@@ -37,11 +37,15 @@ enum CXLCacheState{
 };
 
 typedef struct CXLCache {
-    uint8_t data[8];
+    uint8_t data[64];
     enum CXLCacheState state;
-    bool ats;
+    uint32_t ats;
+    CXLCacheD2HReq req[7];
+    uint16_t remaining1;
+    uint8_t remaining2;
+    bool remaining3[3];
 } CXLCache;
-// static_assert(sizeof(CXLCache) == 512, "CXLCache size is incorrect");
+static_assert(sizeof(CXLCache) == 1024, "CXLCache size is incorrect");
 
 struct CXLCacheRegion {
     uint64_t size;
