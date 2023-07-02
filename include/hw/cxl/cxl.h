@@ -40,12 +40,12 @@ typedef struct CXLCache {
     uint8_t data[64];
     enum CXLCacheState state;
     uint32_t ats;
-    CXLCacheD2HReq req[7];
+    CXLCacheD2HReq req[6];
     uint16_t remaining1;
     uint8_t remaining2;
     bool remaining3[3];
 } CXLCache;
-static_assert(sizeof(CXLCache) == 1024, "CXLCache size is incorrect");
+static_assert(sizeof(CXLCache) == 128, "CXLCache size is incorrect");
 
 struct CXLCacheRegion {
     uint64_t size;
