@@ -2365,7 +2365,7 @@ void kvm_spp_dirty_log_start(Monitor *mon)
 {
     KVMState *s = KVM_STATE(current_accel());
     // int ret;
-    // DPRINTF(mon, "spp_dirty_log_start\n");
+    DPRINTF(mon, "spp_dirty_log_start\n");
     // ret = kvm_vm_enable_cap(s, KVM_CAP_X86_SPP_DIRTY_LOG, 0);
     // DPRINTF(mon, "result: %d\n", ret);
     kvm_setspp_all(s);

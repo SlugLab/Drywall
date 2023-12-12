@@ -537,6 +537,36 @@
 }
 
 ##
+# @CXLType1Options:
+#
+# Create a CXL Fixed Memory Window
+#
+# @size: Size of the Fixed Memory Window in bytes. Must be a multiple
+#        of 256MiB.
+# @targets: Target root bridge IDs from -device ...,id=<ID> for each root
+#           bridge.
+#
+# Since 7.1
+##
+{ 'struct': 'CXLType1Options',
+  'data': {
+      'size': 'size',
+      'targets': ['str'] }}
+
+##
+# @CXLType1Properties:
+#
+# List of CXL Type1 device.
+#
+# @cxl-type1: List of CXLType1Options
+#
+# Since 8.0
+##
+{ 'struct' : 'CXLType1Properties',
+  'data': { 'cxl-type1': ['CXLType1Options'] }
+}
+
+##
 # @X86CPURegister32:
 #
 # A X86 32-bit register

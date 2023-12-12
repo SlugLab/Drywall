@@ -22,6 +22,37 @@
 #include "hw/pci/pcie_port.h"
 #include "hw/pci-bridge/pci_expander_bridge.h"
 
+static void cxl_type1_config(CXLState *cxl_state,
+                                CXLType1Options *object,
+                                Error **errp)
+{
+    g_autofree CXLCacheRegion *t1 = g_malloc0(sizeof(*t1));
+    strList *target;
+    int i;
+
+    for (target = object->targets; target; target = target->next) {
+        t1->num_targets++;
+    }
+
+    t1->targets = g_malloc0_n(t1->num_targets, sizeof(*t1->targets));
+    for (i = 0, target = object->targets; target; i++, target = target->next) {
+        /* This link cannot be resolved yet, so stash the name for now */
+        t1->targets[i] = g_strdup(target->value);
+    }
+
+    if (object->size % (256 * MiB)) {
+        error_setg(errp,
+                   "Size of a CXL fixed memory window must be a multiple of 256MiB");
+        return;
+    }
+    t1->size = object->size;
+
+    cxl_state->ctype1s = g_list_append(cxl_state->ctype1s,
+                                             g_steal_pointer(&t1));
+
+    return;
+}
+
 static void cxl_fixed_memory_window_config(CXLState *cxl_state,
                                            CXLFixedMemoryWindowOptions *object,
                                            Error **errp)
@@ -312,6 +343,32 @@ static void machine_set_cfmw(Object *obj, Visitor *v, const char *name,
     state->cfmw_list = cfmw_list;
 }
 
+static void machine_get_type1(Object *obj, Visitor *v, const char *name,
+                             void *opaque, Error **errp)
+{
+    CXLType1OptionsList **list = opaque;
+
+    visit_type_CXLType1OptionsList(v, name, list, errp);
+}
+
+static void machine_set_type1(Object *obj, Visitor *v, const char *name,
+                             void *opaque, Error **errp)
+{
+    CXLState *state = opaque;
+    CXLType1OptionsList *type1_list = NULL;
+    CXLType1OptionsList *it;
+
+    visit_type_CXLType1OptionsList(v, name, &type1_list, errp);
+    if (!type1_list) {
+        return;
+    }
+
+    for (it = type1_list; it; it = it->next) {
+        cxl_type1_config(state, it->value, errp);
+    }
+    state->ctype1_list = type1_list;
+}
+
 void cxl_machine_init(Object *obj, CXLState *state)
 {
     object_property_add(obj, "cxl", "bool", machine_get_cxl,
@@ -325,6 +382,11 @@ void cxl_machine_init(Object *obj, CXLState *state)
                         NULL, state);
     object_property_set_description(obj, "cxl-fmw",
                                     "CXL Fixed Memory Windows (array)");
+    object_property_add(obj, "cxl-type1", "CXLCacheDevice",
+                        machine_get_type1, machine_set_type1,
+                        NULL, state);
+    object_property_set_description(obj, "cxl-type1",
+                                    "CXL Type1 Device (array)");
 }
 
 void cxl_hook_up_pxb_registers(PCIBus *bus, CXLState *state, Error **errp)

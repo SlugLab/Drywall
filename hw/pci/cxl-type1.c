@@ -1,8 +1,8 @@
 #include "qemu/osdep.h"
 #include "qemu/units.h"
 #include "qemu/error-report.h"
-#include "hw/mem/memory-device.h"
 #include "hw/mem/pc-dimm.h"
+#include "hw/virtio/virtio-crypto.h"
 #include "hw/pci/pci.h"
 #include "hw/qdev-properties.h"
 #include "qapi/error.h"
@@ -11,6 +11,7 @@
 #include "qemu/pmem.h"
 #include "qemu/range.h"
 #include "qemu/rcu.h"
+#include "sysemu/cryptodev.h"
 #include "sysemu/hostmem.h"
 #include "sysemu/numa.h"
 #include "hw/cxl/cxl.h"
@@ -29,7 +30,7 @@ enum {
     CT1_CDAT_NUM_ENTRIES
 };
 
-static CXLCacheRegion *host_memory_backend_get_cxl_cache(HostMemoryBackend *){
+static CXLCacheRegion *host_memory_backend_get_cxl_cache(HostMemoryBackend * backend){
     // PageCache *pc =  mycache_init(backend);
     return NULL;
 }
@@ -477,8 +478,8 @@ static void ct1d_reset(DeviceState *dev)
 }
 
 static Property ct1_props[] = {
-    DEFINE_PROP_LINK("memdev", CXLType1Dev, hostmem, TYPE_MEMORY_BACKEND,
-                     HostMemoryBackend *),
+    DEFINE_PROP_LINK("cryptodev", VirtIOCryptoCXL, ,
+                     TYPE_CRYPTODEV_BACKEND, VirtIOCryptoCXL *),
     DEFINE_PROP_LINK("lsa", CXLType1Dev, lsa, TYPE_MEMORY_BACKEND,
                      HostMemoryBackend *),
     DEFINE_PROP_UINT64("sn", CXLType1Dev, sn, UI64_NULL),
@@ -529,6 +530,8 @@ static void set_lsa(CXLType1Dev *ct1d, const void *buf, uint64_t size,
     memcpy(lsa, buf, size);
     memory_region_set_dirty(mr, offset, size);
 
+    /// put the cxlcache into it.
+
     /*
      * Just like the PMEM, if the guest is not allowed to exit gracefully, label
      * updates will get lost.
@@ -543,7 +546,7 @@ static void ct1_class_init(ObjectClass *oc, void *data)
 
     pc->realize = ct1_realize;
     pc->exit = ct1_exit;
-    pc->class_id = PCI_CLASS_STORAGE_EXPRESS;
+    pc->class_id = PCI_CLASS_CRYPT_OTHER;
     pc->vendor_id = PCI_VENDOR_ID_INTEL;
     pc->device_id = 0xd93; /* LVF for now */
     pc->revision = 1;
@@ -551,8 +554,8 @@ static void ct1_class_init(ObjectClass *oc, void *data)
     pc->config_write = ct1d_config_write;
     pc->config_read = ct1d_config_read;
 
-    set_bit(DEVICE_CATEGORY_STORAGE, dc->categories);
-    dc->desc = "CXL PMEM Device (Type 3)";
+    set_bit(DEVICE_CATEGORY_MISC, dc->categories);
+    dc->desc = "CXL.cache Device (Type 1)";
     dc->reset = ct1d_reset;
     device_class_set_props(dc, ct1_props);
 

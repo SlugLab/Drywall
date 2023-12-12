@@ -66,6 +66,7 @@
 
 #include "sysemu/kvm.h"
 #include "monitor/monitor-internal.h"
+#define SUBPAGE_MAX_BITMAP 512
 
 /***********************************************************/
 /* ram save/restore */

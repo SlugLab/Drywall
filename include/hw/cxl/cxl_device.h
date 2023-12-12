@@ -276,6 +276,11 @@ struct CXLType1Class {
                     uint64_t offset);
 };
 
+MemTxResult cxl_type1_read(PCIDevice *d, hwaddr host_addr, uint64_t *data,
+                           unsigned size, MemTxAttrs attrs);
+MemTxResult cxl_type1_write(PCIDevice *d, hwaddr host_addr, uint64_t data,
+                            unsigned size, MemTxAttrs attrs);
+
 struct CXLType3Dev {
     /* Private */
     PCIDevice parent_obj;

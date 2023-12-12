@@ -49,9 +49,12 @@ static_assert(sizeof(CXLCache) == 128, "CXLCache size is incorrect");
 
 struct CXLCacheRegion {
     uint64_t size;
-    uint64_t base;
+    char **targets;
+    PXBDev *target_hbs[8];
+    uint8_t num_targets;
     CXLCache *cache;
-} ;
+    hwaddr base;
+};
 
 typedef struct CXLFixedWindow {
     uint64_t size;
@@ -66,11 +69,14 @@ typedef struct CXLFixedWindow {
 } CXLFixedWindow;
 
 typedef struct CXLState {
-    bool is_enabled;
-    MemoryRegion host_mr;
-    unsigned int next_mr_idx;
-    GList *fixed_windows;
-    CXLFixedMemoryWindowOptionsList *cfmw_list;
+  bool is_enabled;
+  MemoryRegion host_mr;
+  unsigned int next_mr_idx;
+  GList *fixed_windows;
+  CXLFixedMemoryWindowOptionsList *cfmw_list;
+  
+  GList *ctype1s;
+  CXLType1OptionsList *ctype1_list;
 } CXLState;
 
 struct CXLHost {

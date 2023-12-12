@@ -154,12 +154,12 @@ void aio_bh_call(QEMUBH *bh)
 /* Multiple occurrences of aio_bh_poll cannot be called concurrently. */
 int aio_bh_poll(AioContext *ctx)
 {
-    BHListSlice slice;
+    BHListSlice *slice=g_malloc(sizeof(BHListSlice)); 
     BHListSlice *s;
     int ret = 0;
 
-    QSLIST_MOVE_ATOMIC(&slice.bh_list, &ctx->bh_list);
-    QSIMPLEQ_INSERT_TAIL(&ctx->bh_slice_list, &slice, next);
+    QSLIST_MOVE_ATOMIC(&slice->bh_list, &ctx->bh_list);
+    QSIMPLEQ_INSERT_TAIL(&ctx->bh_slice_list, slice, next);
 
     while ((s = QSIMPLEQ_FIRST(&ctx->bh_slice_list))) {
         QEMUBH *bh;

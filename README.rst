@@ -169,3 +169,6 @@ Information on additional methods of contacting the community can be
 found online via the QEMU website:
 
 * `<https://wiki.qemu.org/Contribute/StartHere>`_
+
+TCG JIT access to the virtio crypto.
+LITMUS to verify the result is correct.
