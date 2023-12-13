@@ -32,7 +32,7 @@ typedef struct VirtIOCryptoCXL VirtIOCryptoCXL;
 #define TYPE_VIRTIO_CRYPTO_CXL "virtio-crypto-cxl"
 DECLARE_INSTANCE_CHECKER(VirtIOCryptoCXL, VIRTIO_CRYPTO_PCI,
                          TYPE_VIRTIO_CRYPTO_CXL)
-
+                         
 struct VirtIOCryptoCXL {
     VirtIOPCIProxy parent_obj;
     VirtIOCrypto vdev;

@@ -13,7 +13,23 @@
 #include "hw/cxl/cxl_component.h"
 #include "hw/pci/pci_device.h"
 #include "hw/register.h"
+#include "hw/virtio/virtio-crypto.h"
+#include "hw/virtio/virtio-pci.h"
 
+
+typedef struct VirtIOCryptoCXL VirtIOCryptoCXL;
+// Todo CXL Type 1 wrapper ATS wrapper
+/*
+ * virtio-crypto-pci: This extends VirtioPCIProxy.
+ */
+#define TYPE_VIRTIO_CRYPTO_CXL "virtio-crypto-cxl"
+DECLARE_INSTANCE_CHECKER(VirtIOCryptoCXL, VIRTIO_CRYPTO_PCI,
+                         TYPE_VIRTIO_CRYPTO_CXL)
+struct VirtIOCryptoCXL {
+    VirtIOPCIProxy parent_obj;
+    VirtIOCrypto *vdev;
+    CXLCacheRegion* ctype1;
+};
 /*
  * The following is how a CXL device's Memory Device registers are laid out.
  * The only requirement from the spec is that the capabilities array and the
@@ -243,6 +259,7 @@ struct CXLType1Dev {
     /* Private */
     PCIDevice parent_obj;
 
+    VirtIOCryptoCXL* vdev;
     /* Properties */
     CXLCacheRegion *cache_regions;
     HostMemoryBackend *hostmem;

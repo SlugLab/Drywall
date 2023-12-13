@@ -5406,7 +5406,6 @@ int kvm_arch_handle_exit(CPUState *cs, struct kvm_run *run)
         break;
     case KVM_EXIT_SPP:
         ret = kvm_handle_spp(cpu, run->spp.addr, run->spp.insn_len);
-        // set the memory afterwords
         break;
     case KVM_EXIT_SPP_LOG_FULL:
         if (kvm_vm_ioctl(state, KVM_GET_SPP_LOG, &spp_log) == -1) {

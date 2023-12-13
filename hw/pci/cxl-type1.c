@@ -476,10 +476,12 @@ static void ct1d_reset(DeviceState *dev)
     cxl_component_register_init_common(reg_state, write_msk, CXL2_TYPE3_DEVICE);
     cxl_device_register_init_common(&ct1d->cxl_dstate);
 }
-
+// Create memory 
 static Property ct1_props[] = {
-    DEFINE_PROP_LINK("cryptodev", VirtIOCryptoCXL, ,
-                     TYPE_CRYPTODEV_BACKEND, VirtIOCryptoCXL *),
+    DEFINE_PROP_LINK("cryptodev", CXLType1Dev, vdev,
+                     TYPE_VIRTIO_CRYPTO_CXL, VirtIOCryptoCXL *),
+    DEFINE_PROP_LINK("memdev", CXLType1Dev, hostmem,
+                     TYPE_MEMORY_BACKEND, HostMemoryBackend *),
     DEFINE_PROP_LINK("lsa", CXLType1Dev, lsa, TYPE_MEMORY_BACKEND,
                      HostMemoryBackend *),
     DEFINE_PROP_UINT64("sn", CXLType1Dev, sn, UI64_NULL),

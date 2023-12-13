@@ -26,6 +26,12 @@
 #include "sysemu/cryptodev-vhost.h"
 
 #define VIRTIO_CRYPTO_VM_VERSION 1
+#define DPRINTF(fmt, ...) \
+do { \
+    if (DEBUG_VIRTIO_CRYPTO) { \
+        fprintf(stderr, "virtio_crypto: " fmt, ##__VA_ARGS__); \
+    } \
+} while (0)
 
 typedef struct VirtIOCryptoSessionReq {
     VirtIODevice *vdev;
