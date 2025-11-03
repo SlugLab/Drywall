@@ -31,7 +31,7 @@
 #include "standard-headers/linux/virtio_mem.h"
 #include "standard-headers/linux/virtio_vsock.h"
 
-#include CONFIG_DEVICES
+#include "x86_64-softmmu-config-devices.h"
 
 #define FEATURE_ENTRY(name, desc) (qmp_virtio_feature_map_t) \
     { .virtio_bit = name, .feature_desc = desc }

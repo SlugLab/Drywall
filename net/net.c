@@ -103,7 +103,7 @@ int convert_host_port(struct sockaddr_in *saddr, const char *host,
                 error_setg(errp, "can't resolve host address '%s'", host);
                 return -1;
             }
-            saddr->sin_addr = *(struct in_addr *)he->h_addr;
+            saddr->sin_addr = *(struct in_addr *)he->h_addr_list[0];
         }
     }
     if (qemu_strtol(port, &r, 0, &p) != 0) {

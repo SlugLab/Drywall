@@ -28,7 +28,7 @@
 #include "migration/misc.h"
 #include "hw/boards.h"
 #include "hw/qdev-properties.h"
-#include CONFIG_DEVICES
+#include "x86_64-softmmu-config-devices.h"
 #include "trace.h"
 
 /*

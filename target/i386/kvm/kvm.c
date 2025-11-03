@@ -56,7 +56,7 @@
 #include "exec/memattrs.h"
 #include "trace.h"
 
-#include CONFIG_DEVICES
+#include "x86_64-softmmu-config-devices.h"
 
 //#define DEBUG_KVM
 

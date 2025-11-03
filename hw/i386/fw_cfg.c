@@ -23,7 +23,7 @@
 #include "e820_memory_layout.h"
 #include "kvm/kvm_i386.h"
 #include "qapi/error.h"
-#include CONFIG_DEVICES
+#include "x86_64-softmmu-config-devices.h"
 
 struct hpet_fw_config hpet_cfg = {.count = UINT8_MAX};
 

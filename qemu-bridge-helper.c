@@ -25,13 +25,14 @@
 
 #include "qemu/osdep.h"
 
-
-#include <sys/ioctl.h>
+/* Include network headers */
 #include <sys/socket.h>
+#include <sys/ioctl.h>
+#include <linux/if.h>
+#include <arpa/inet.h>
+
 #include <sys/un.h>
 #include <sys/prctl.h>
-
-#include <net/if.h>
 
 #include <linux/sockios.h>
 
@@ -59,7 +60,7 @@ enum {
 
 typedef struct ACLRule {
     int type;
-    char iface[IFNAMSIZ];
+    char iface[IF_NAMESIZE];
     QSIMPLEQ_ENTRY(ACLRule) entry;
 } ACLRule;
 
@@ -118,7 +119,7 @@ static int parse_acl_file(const char *filename, ACLList *acl_list)
         }
         *argend = 0;
 
-        if (!g_str_equal(cmd, "include") && strlen(arg) >= IFNAMSIZ) {
+        if (!g_str_equal(cmd, "include") && strlen(arg) >= IF_NAMESIZE) {
             fprintf(stderr, "name `%s' too long: %zu\n", arg, strlen(arg));
             goto err;
         }
@@ -129,7 +130,7 @@ static int parse_acl_file(const char *filename, ACLList *acl_list)
                 acl_rule->type = ACL_DENY_ALL;
             } else {
                 acl_rule->type = ACL_DENY;
-                snprintf(acl_rule->iface, IFNAMSIZ, "%s", arg);
+                snprintf(acl_rule->iface, IF_NAMESIZE, "%s", arg);
             }
             QSIMPLEQ_INSERT_TAIL(acl_list, acl_rule, entry);
         } else if (strcmp(cmd, "allow") == 0) {
@@ -138,7 +139,7 @@ static int parse_acl_file(const char *filename, ACLList *acl_list)
                 acl_rule->type = ACL_ALLOW_ALL;
             } else {
                 acl_rule->type = ACL_ALLOW;
-                snprintf(acl_rule->iface, IFNAMSIZ, "%s", arg);
+                snprintf(acl_rule->iface, IF_NAMESIZE, "%s", arg);
             }
             QSIMPLEQ_INSERT_TAIL(acl_list, acl_rule, entry);
         } else if (strcmp(cmd, "include") == 0) {
@@ -178,7 +179,7 @@ static bool has_vnet_hdr(int fd)
 static void prep_ifreq(struct ifreq *ifr, const char *ifname)
 {
     memset(ifr, 0, sizeof(*ifr));
-    snprintf(ifr->ifr_name, IFNAMSIZ, "%s", ifname);
+    snprintf(ifr->ifr_name, IF_NAMESIZE, "%s", ifname);
 }
 
 static int send_fd(int c, int fd)
@@ -240,7 +241,7 @@ int main(int argc, char **argv)
     int use_vnet = 0;
     int mtu;
     const char *bridge = NULL;
-    char iface[IFNAMSIZ];
+    char iface[IF_NAMESIZE];
     int index;
     ACLRule *acl_rule;
     ACLList acl_list;
@@ -279,7 +280,7 @@ int main(int argc, char **argv)
         usage();
         return EXIT_FAILURE;
     }
-    if (strlen(bridge) >= IFNAMSIZ) {
+    if (strlen(bridge) >= IF_NAMESIZE) {
         fprintf(stderr, "name `%s' too long: %zu\n", bridge, strlen(bridge));
         return EXIT_FAILURE;
     }

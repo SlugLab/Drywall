@@ -8,6 +8,8 @@
 #ifndef QEMU_MADVISE_H
 #define QEMU_MADVISE_H
 
+#include <sys/mman.h>
+
 #define QEMU_MADV_INVALID -1
 
 #if defined(CONFIG_MADVISE)

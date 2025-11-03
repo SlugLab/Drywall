@@ -27,9 +27,20 @@
 #ifndef QEMU_OSDEP_H
 #define QEMU_OSDEP_H
 
+/* Feature test macros for POSIX and GNU extensions */
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+#ifndef _DEFAULT_SOURCE
+#define _DEFAULT_SOURCE
+#endif
+#ifndef _BSD_SOURCE
+#define _BSD_SOURCE
+#endif
+
 #include "config-host.h"
 #ifdef NEED_CPU_H
-#include CONFIG_TARGET
+#include "x86_64-softmmu-config-target.h"
 #else
 #include "exec/poison.h"
 #endif
@@ -110,7 +121,9 @@ QEMU_EXTERN_C int daemon(int, int);
 #include <getopt.h>
 #include <sys/stat.h>
 #include <sys/time.h>
+#include <sys/mman.h>
 #include <assert.h>
+#include <dirent.h>
 /* setjmp must be declared before sysemu/os-win32.h
  * because it is redefined there. */
 #include <setjmp.h>
@@ -119,6 +132,8 @@ QEMU_EXTERN_C int daemon(int, int);
 #ifdef CONFIG_IOVEC
 #include <sys/uio.h>
 #endif
+
+/* empty - network headers moved below */
 
 #if defined(__linux__) && defined(__sparc__)
 /* The SPARC definition of QEMU_VMALLOC_ALIGN needs SHMLBA */
@@ -156,6 +171,18 @@ extern "C" {
 #endif
 
 #include "qemu/typedefs.h"
+
+/* Include network headers for socket operations */
+#ifndef _WIN32
+#include <sys/socket.h>
+#include <netinet/in.h>
+/* Don't include netinet/ip.h to avoid conflicts with linux/ip.h */
+#include <net/if.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+/* Include sys/ioctl.h for ioctl and struct ifreq */
+#include <sys/ioctl.h>
+#endif
 
 /**
  * Mark a function that executes in coroutine context

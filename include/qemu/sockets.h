@@ -9,6 +9,15 @@ int inet_aton(const char *cp, struct in_addr *ia);
 
 #endif /* !_WIN32 */
 
+/* Fallback definitions for systems without these constants */
+#ifndef NI_MAXHOST
+# define NI_MAXHOST 1025
+#endif
+
+#ifndef NI_MAXSERV
+# define NI_MAXSERV 32
+#endif
+
 #include "qapi/qapi-types-sockets.h"
 
 /* misc helpers */

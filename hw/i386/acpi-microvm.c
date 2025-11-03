@@ -43,7 +43,7 @@
 #include "acpi-common.h"
 #include "acpi-microvm.h"
 
-#include CONFIG_DEVICES
+#include "x86_64-softmmu-config-devices.h"
 
 static void acpi_dsdt_add_virtio(Aml *scope,
                                  MicrovmMachineState *mms)

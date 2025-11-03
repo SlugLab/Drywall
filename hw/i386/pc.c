@@ -96,7 +96,7 @@
 #include "e820_memory_layout.h"
 #include "fw_cfg.h"
 #include "trace.h"
-#include CONFIG_DEVICES
+#include "x86_64-softmmu-config-devices.h"
 
 /*
  * Helper for setting model-id for CPU models that changed model-id

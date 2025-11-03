@@ -325,7 +325,7 @@ static void hv_syndbg_realize(DeviceState *dev, Error **errp)
                        TYPE_HV_SYNDBG, syndbg->host_ip);
             return;
         }
-        syndbg->servaddr.sin_addr = *(struct in_addr *)he->h_addr;
+        syndbg->servaddr.sin_addr = *(struct in_addr *)he->h_addr_list[0];
     }
 
     syndbg->socket = socket(AF_INET, SOCK_DGRAM, 0);

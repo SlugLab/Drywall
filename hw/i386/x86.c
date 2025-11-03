@@ -59,7 +59,7 @@
 #include "multiboot.h"
 #include "elf.h"
 #include "standard-headers/asm-x86/bootparam.h"
-#include CONFIG_DEVICES
+#include "x86_64-softmmu-config-target.h"
 #include "kvm/kvm_i386.h"
 
 /* Physical Address of PVH entry point read from kernel ELF NOTE */

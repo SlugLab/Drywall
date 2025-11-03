@@ -15,6 +15,7 @@
 #include "sysemu/hostmem.h"
 #include "sysemu/numa.h"
 #include "hw/cxl/cxl.h"
+#include "hw/cxl/cxl_cache_coherency.h"
 #include "hw/pci/msix.h"
 
 #define DWORD_BYTE 4
@@ -30,9 +31,33 @@ enum {
     CT1_CDAT_NUM_ENTRIES
 };
 
-static CXLCacheRegion *host_memory_backend_get_cxl_cache(HostMemoryBackend * backend){
-    // PageCache *pc =  mycache_init(backend);
-    return NULL;
+static CXLCacheRegion *host_memory_backend_get_cxl_cache(HostMemoryBackend *backend,
+                                                          CXLType1Dev *ct1d)
+{
+    CXLCacheRegion *region;
+    MemoryRegion *mr;
+
+    if (!backend) {
+        return NULL;
+    }
+
+    mr = host_memory_backend_get_memory(backend);
+    if (!mr) {
+        return NULL;
+    }
+
+    /* Allocate cache region if not already created */
+    if (!ct1d->cache_regions) {
+        region = g_new0(CXLCacheRegion, 1);
+        region->size = int128_get64(backend->size);
+        region->base = 0; /* Will be set by HDM decoder */
+        region->cache = NULL; /* Will be allocated by coherency_init */
+        ct1d->cache_regions = region;
+    } else {
+        region = ct1d->cache_regions;
+    }
+
+    return region;
 }
 
 static int ct1_build_cdat_entries_for_type1(CDATSubHeader **cdat_table,
@@ -162,7 +187,7 @@ static int ct1_build_cdat_table(CDATSubHeader ***cdat_table, void *priv)
     int rc;
 
 
-    cxlcacheregion = host_memory_backend_get_cxl_cache(ct1d->hostmem);
+    cxlcacheregion = host_memory_backend_get_cxl_cache(ct1d->hostmem, ct1d);
     if (!cxlcacheregion) {
         return -EINVAL;
     }
@@ -454,6 +479,17 @@ static void ct1_realize(PCIDevice *pci_dev, Error **errp)
     cxl_cstate->cdat.free_cdat_table = ct1_free_cdat_table;
     cxl_cstate->cdat.private = ct1d;
     cxl_doe_cdat_init(cxl_cstate, errp);
+
+    /* Initialize cache coherency tracking */
+    if (ct1d->cache_regions) {
+        MemoryRegion *hostmem_mr = host_memory_backend_get_memory(ct1d->hostmem);
+        ct1d->coherency_state = cxl_cache_coherency_init(ct1d->cache_regions,
+                                                          hostmem_mr);
+        if (!ct1d->coherency_state) {
+            error_setg(errp, "Failed to initialize cache coherency");
+            return;
+        }
+    }
 }
 
 static void ct1_exit(PCIDevice *pci_dev)
@@ -462,8 +498,24 @@ static void ct1_exit(PCIDevice *pci_dev)
     CXLComponentState *cxl_cstate = &ct1d->cxl_cstate;
     ComponentRegisters *regs = &cxl_cstate->crb;
 
+    /* Mark device as offline and cleanup cache coherency */
+    if (ct1d->coherency_state) {
+        cxl_cache_device_offline(ct1d->coherency_state);
+        cxl_cache_coherency_cleanup(ct1d->coherency_state);
+        ct1d->coherency_state = NULL;
+    }
+
     cxl_doe_cdat_release(cxl_cstate);
     g_free(regs->special_ops);
+
+    if (ct1d->cache_regions) {
+        if (ct1d->cache_regions->cache) {
+            g_free(ct1d->cache_regions->cache);
+        }
+        g_free(ct1d->cache_regions);
+        ct1d->cache_regions = NULL;
+    }
+
     address_space_destroy(&ct1d->hostmem_as);
 }
 

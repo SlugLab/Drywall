@@ -78,7 +78,7 @@
 #include "hw/acpi/viot.h"
 #include "hw/acpi/cxl.h"
 
-#include CONFIG_DEVICES
+#include "x86_64-softmmu-config-devices.h"
 
 /* These are used to size the ACPI tables for -M pc-i440fx-1.7 and
  * -M pc-i440fx-2.0.  Even if the actual amount of AML generated grows

@@ -13,6 +13,7 @@
 
 #include "qemu/osdep.h"
 #include <sys/ioctl.h>
+#include <linux/if.h>
 #include <sys/utsname.h>
 #include <sys/wait.h>
 #include <dirent.h>

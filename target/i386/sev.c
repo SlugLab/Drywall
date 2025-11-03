@@ -1046,7 +1046,8 @@ int sev_inject_launch_secret(const char *packet_hdr, const char *secret,
     }
 
     /* secret can be injected only in this state */
-    if (!sev_check_state(sev_guest, SEV_STATE_LAUNCH_SECRET)) {
+    if (!sev_check_state(sev_guest, 
+        SEV_STATE_LAUNCH_SECRET)) {
         error_setg(errp, "SEV: Not in correct state. (LSECRET) %x",
                      sev_guest->state);
         return 1;

@@ -44,6 +44,14 @@
 # define AI_NUMERICSERV 0
 #endif
 
+#ifndef NI_MAXHOST
+# define NI_MAXHOST 1025
+#endif
+
+#ifndef NI_MAXSERV
+# define NI_MAXSERV 32
+#endif
+
 
 static int inet_getport(struct addrinfo *e)
 {

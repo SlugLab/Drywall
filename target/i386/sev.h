@@ -15,7 +15,7 @@
 #define I386_SEV_H
 
 #ifndef CONFIG_USER_ONLY
-#include CONFIG_DEVICES /* CONFIG_SEV */
+#include "x86_64-softmmu-config-devices.h" /* CONFIG_SEV */
 #endif
 
 #include "exec/confidential-guest-support.h"

@@ -24,12 +24,15 @@
  */
 
 #include "qemu/osdep.h"
+
+/* Include Linux-specific network headers */
+#include <sys/socket.h>
+#include <sys/ioctl.h>
+#include <linux/if.h>
+
 #include "tap_int.h"
 #include "tap-linux.h"
 #include "net/tap.h"
-
-#include <net/if.h>
-#include <sys/ioctl.h>
 
 #include "qapi/error.h"
 #include "qemu/error-report.h"
@@ -97,9 +100,9 @@ int tap_open(char *ifname, int ifname_size, int *vnet_hdr,
     }
 
     if (ifname[0] != '\0')
-        pstrcpy(ifr.ifr_name, IFNAMSIZ, ifname);
+        pstrcpy(ifr.ifr_name, IF_NAMESIZE, ifname);
     else
-        pstrcpy(ifr.ifr_name, IFNAMSIZ, "tap%d");
+        pstrcpy(ifr.ifr_name, IF_NAMESIZE, "tap%d");
     ret = ioctl(fd, TUNSETIFF, (void *) &ifr);
     if (ret != 0) {
         if (ifname[0] != '\0') {

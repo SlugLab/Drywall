@@ -30,7 +30,7 @@
 #include "qemu/cutils.h"
 #include "qapi/qmp/qerror.h"
 #include "qom/object_interfaces.h"
-#include CONFIG_DEVICES
+#include "x86_64-softmmu-config-devices.h"
 #ifdef CONFIG_PSERIES
 #include "hw/ppc/spapr_rtas.h"
 #endif

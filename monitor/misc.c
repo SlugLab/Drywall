@@ -78,7 +78,7 @@
 #endif
 
 /* Make devices configuration available for use in hmp-commands*.hx templates */
-#include CONFIG_DEVICES
+#include "x86_64-softmmu-config-devices.h"
 
 /* file descriptors passed via SCM_RIGHTS */
 typedef struct mon_fd_t mon_fd_t;

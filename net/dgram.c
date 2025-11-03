@@ -25,6 +25,23 @@
 
 #include "qemu/osdep.h"
 
+/* Include network headers */
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
+/* Define struct ip_mreq - workaround for _XOPEN_SOURCE=600 */
+#ifndef _QEMU_IP_MREQ_DEFINED
+#define _QEMU_IP_MREQ_DEFINED
+struct ip_mreq {
+    struct in_addr imr_multiaddr;  /* IP multicast address of group */
+    struct in_addr imr_interface;  /* local IP address of interface */
+};
+#endif
+#ifndef IP_ADD_MEMBERSHIP
+#define IP_ADD_MEMBERSHIP 35
+#endif
+
 #include "net/net.h"
 #include "clients.h"
 #include "monitor/monitor.h"

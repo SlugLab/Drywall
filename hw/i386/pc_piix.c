@@ -23,7 +23,7 @@
  */
 
 #include "qemu/osdep.h"
-#include CONFIG_DEVICES
+#include "x86_64-softmmu-config-devices.h"
 
 #include "qemu/units.h"
 #include "hw/dma/i8257.h"

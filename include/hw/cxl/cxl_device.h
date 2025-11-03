@@ -255,6 +255,10 @@ typedef struct CXLError {
 } CXLError;
 
 typedef QTAILQ_HEAD(, CXLError) CXLErrorList;
+
+/* Forward declaration */
+typedef struct CXLCacheCoherencyState CXLCacheCoherencyState;
+
 struct CXLType1Dev {
     /* Private */
     PCIDevice parent_obj;
@@ -273,6 +277,9 @@ struct CXLType1Dev {
 
     /* DOE */
     DOECap doe_cdat;
+
+    /* Cache coherency tracking */
+    CXLCacheCoherencyState *coherency_state;
 
     /* Error injection */
     CXLErrorList error_list;

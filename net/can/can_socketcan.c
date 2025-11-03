@@ -26,6 +26,15 @@
  */
 
 #include "qemu/osdep.h"
+
+/* Include network headers */
+#include <sys/socket.h>
+#include <sys/ioctl.h>
+#include <linux/if.h>
+
+#include <linux/can.h>
+#include <linux/can/raw.h>
+
 #include "qemu/log.h"
 #include "qemu/main-loop.h"
 #include "qemu/module.h"
@@ -35,11 +44,6 @@
 #include "qemu/error-report.h"
 #include "net/can_emu.h"
 #include "net/can_host.h"
-
-#include <sys/ioctl.h>
-#include <net/if.h>
-#include <linux/can.h>
-#include <linux/can/raw.h>
 #include "qom/object.h"
 
 #ifndef DEBUG_CAN
