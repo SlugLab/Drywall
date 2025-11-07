@@ -1,0 +1,108 @@
+╔══════════════════════════════════════════════════════════════════╗
+║                   CXL CRYPTO - QUICK START GUIDE                  ║
+╚══════════════════════════════════════════════════════════════════╝
+
+SETUP COMPLETE! ✓
+
+Your VM is ready with LUKS encryption and CXL crypto accelerator support.
+
+┌────────────────────────────────────────────────────────────────┐
+│ 1. START THE VM                                                 │
+└────────────────────────────────────────────────────────────────┘
+
+   cd /root/Drywall/build
+   bash ../launch_vm_nogdb.sh
+
+   (Use launch.sh if you want GDB debugging)
+
+┌────────────────────────────────────────────────────────────────┐
+│ 2. FIRST BOOT (Automatic Setup)                                │
+└────────────────────────────────────────────────────────────────┘
+
+   The system will automatically:
+   • Load crypto modules (dm-crypt, virtio_crypto)
+   • Create /root/encrypted_volume.img (1GB)
+   • Format with LUKS (AES-256-XTS)
+   • Mount at /mnt/encrypted
+   • Generate test data
+
+   Wait for: "Setup Complete!" message
+
+┌────────────────────────────────────────────────────────────────┐
+│ 3. VERIFY SETUP (Inside VM)                                    │
+└────────────────────────────────────────────────────────────────┘
+
+   cat /root/LUKS_README.txt          # Read full documentation
+   bash /root/verify_crypto_accel.sh  # Verify hardware crypto
+   df -h /mnt/encrypted                # Check mount
+   ls -la /mnt/encrypted               # View encrypted files
+
+┌────────────────────────────────────────────────────────────────┐
+│ 4. PERFORMANCE TEST (Optional)                                 │
+└────────────────────────────────────────────────────────────────┘
+
+   bash /root/crypto_benchmark.sh
+
+   This will test:
+   • AES-256-XTS performance
+   • AES-128-XTS performance
+   • AES-256-CBC performance
+
+┌────────────────────────────────────────────────────────────────┐
+│ CREDENTIALS & FILES                                            │
+└────────────────────────────────────────────────────────────────┘
+
+   Password:       cxl_crypto_test
+   Password File:  /root/.luks_password
+   Encrypted Vol:  /root/encrypted_volume.img
+   Mount Point:    /mnt/encrypted
+   Log File:       /root/luks_setup.log
+
+┌────────────────────────────────────────────────────────────────┐
+│ QUICK COMMANDS                                                 │
+└────────────────────────────────────────────────────────────────┘
+
+   # Mount
+   bash /root/mount_luks.sh /root/encrypted_volume.img mount
+
+   # Unmount
+   bash /root/mount_luks.sh /root/encrypted_volume.img umount
+
+   # Status
+   bash /root/mount_luks.sh /root/encrypted_volume.img status
+
+   # Check crypto
+   cat /proc/crypto | grep virtio
+
+   # PCI devices
+   lspci | grep CXL
+
+┌────────────────────────────────────────────────────────────────┐
+│ TROUBLESHOOTING                                                │
+└────────────────────────────────────────────────────────────────┘
+
+   Service didn't run?
+   → journalctl -u setup-luks-crypto.service
+   → bash /root/init_luks.sh
+
+   Mount failed?
+   → cryptsetup luksOpen /root/encrypted_volume.img cxl_encrypted
+   → mount /dev/mapper/cxl_encrypted /mnt/encrypted
+
+   Need crypto modules?
+   → modprobe dm-crypt
+   → modprobe virtio_crypto
+
+┌────────────────────────────────────────────────────────────────┐
+│ DOCUMENTATION                                                  │
+└────────────────────────────────────────────────────────────────┘
+
+   Host:    /root/Drywall/LUKS_SETUP_COMPLETE.md
+   VM:      /root/LUKS_README.txt
+
+═══════════════════════════════════════════════════════════════════
+
+   READY TO GO! Launch the VM and everything will initialize
+   automatically on first boot.
+
+═══════════════════════════════════════════════════════════════════

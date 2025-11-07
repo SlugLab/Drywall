@@ -1,0 +1,45 @@
+# Makefile for CXL Firewall eBPF Coprocessor
+#
+# Requirements:
+# - clang/llvm (>= 11)
+# - bpftool
+# - libbpf headers
+
+OBJS = cxl_firewall.bpf.o
+SKEL = cxl_firewall.bpf.skeleton.h
+
+LLC ?= llc
+CLANG ?= clang
+BPFTOOL ?= bpftool
+
+# Compiler flags
+INC_FLAGS = -I/usr/include -I/usr/include/x86_64-linux-gnu
+EXTRA_CFLAGS ?= -O2 -g -Wall -Werror -target bpf -D__TARGET_ARCH_x86_64
+EXTRA_CFLAGS += -D__BPF_TRACING__ -D__KERNEL__
+
+all: $(OBJS) $(SKEL)
+
+.PHONY: clean install
+
+clean:
+	rm -f $(OBJS) $(SKEL)
+
+$(OBJS): %.o: %.c
+	$(CLANG) $(INC_FLAGS) $(EXTRA_CFLAGS) -c $< -o $@
+
+$(SKEL): $(OBJS)
+	$(BPFTOOL) gen skeleton $< > $@
+
+install: $(SKEL)
+	cp $(SKEL) ../../ebpf/
+	@echo "CXL firewall eBPF skeleton installed to ../../ebpf/"
+
+.PHONY: help
+help:
+	@echo "CXL Firewall eBPF Build System"
+	@echo "=============================="
+	@echo "Targets:"
+	@echo "  all     - Build eBPF object and skeleton header"
+	@echo "  clean   - Remove build artifacts"
+	@echo "  install - Copy skeleton to QEMU ebpf directory"
+	@echo "  help    - Show this help message"

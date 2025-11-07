@@ -1,4 +1,5 @@
 #!/bin/bash
+# Launch VM without GDB for faster startup
 
 QEMU_BINARY=./build/qemu-system-x86_64
 CXL_MEMSIM_HOST=${CXL_MEMSIM_HOST:-127.0.0.1}
@@ -12,7 +13,14 @@ export CXL_TRANSPORT_MODE=shm
 # Also set TCP fallback
 export CXL_MEMSIM_HOST=127.0.0.1
 export CXL_MEMSIM_PORT=9999
-execd $QEMU_BINARY \
+
+echo "=== Starting VM with CXL Crypto Accelerator ==="
+echo "Image: /root/CXLMemSim/build/qemu.img"
+echo "LUKS encryption will be set up automatically on first boot"
+echo "Press Ctrl-A then X to exit QEMU"
+echo
+
+$QEMU_BINARY \
     --enable-kvm -cpu host \
     -m 16G,maxmem=32G,slots=8 \
     -smp 4 \
