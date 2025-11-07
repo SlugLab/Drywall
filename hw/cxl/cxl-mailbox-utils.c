@@ -286,9 +286,31 @@ static ret_code cmd_identify_memory_device(struct cxl_cmd *cmd,
     } QEMU_PACKED *id;
     QEMU_BUILD_BUG_ON(sizeof(*id) != 0x43);
 
-    CXLType3Dev *ct3d = container_of(cxl_dstate, CXLType3Dev, cxl_dstate);
-    CXLType3Class *cvc = CXL_TYPE3_GET_CLASS(ct3d);
+    /* Try to determine which type of device we have */
+    CXLType3Dev *ct3d;
+    CXLType1Dev *ct1d;
+    Object *obj;
     uint64_t size = cxl_dstate->pmem_size;
+    uint64_t lsa_size;
+    bool is_type1 = false;
+
+    /* Get the owner object from the MemoryRegion to avoid invalid pointer issues */
+    obj = memory_region_owner(&cxl_dstate->device);
+    if (!obj) {
+        return CXL_MBOX_INTERNAL_ERROR;
+    }
+
+    /* Check if this is a Type3 device */
+    if (object_dynamic_cast(obj, TYPE_CXL_TYPE3)) {
+        ct3d = CXL_TYPE3(obj);
+    } else if (object_dynamic_cast(obj, TYPE_CXL_TYPE1)) {
+        /* It's a Type1 device */
+        ct1d = CXL_TYPE1(obj);
+        is_type1 = true;
+    } else {
+        /* Unknown device type */
+        return CXL_MBOX_INTERNAL_ERROR;
+    }
 
     if (!QEMU_IS_ALIGNED(size, CXL_CAPACITY_MULTIPLIER)) {
         return CXL_MBOX_INTERNAL_ERROR;
@@ -302,7 +324,16 @@ static ret_code cmd_identify_memory_device(struct cxl_cmd *cmd,
 
     id->total_capacity = size / CXL_CAPACITY_MULTIPLIER;
     id->persistent_capacity = size / CXL_CAPACITY_MULTIPLIER;
-    id->lsa_size = cvc->get_lsa_size(ct3d);
+
+    /* Get LSA size based on device type */
+    if (is_type1) {
+        CXLType1Class *ct1c = CXL_TYPE1_GET_CLASS(ct1d);
+        lsa_size = ct1c->get_lsa_size(ct1d);
+    } else {
+        CXLType3Class *cvc = CXL_TYPE3_GET_CLASS(ct3d);
+        lsa_size = cvc->get_lsa_size(ct3d);
+    }
+    id->lsa_size = lsa_size;
 
     *len = sizeof(*id);
     return CXL_MBOX_SUCCESS;
@@ -343,20 +374,54 @@ static ret_code cmd_ccls_get_lsa(struct cxl_cmd *cmd,
         uint32_t offset;
         uint32_t length;
     } QEMU_PACKED *get_lsa;
-    CXLType3Dev *ct3d = container_of(cxl_dstate, CXLType3Dev, cxl_dstate);
-    CXLType3Class *cvc = CXL_TYPE3_GET_CLASS(ct3d);
+    CXLType3Dev *ct3d;
+    CXLType1Dev *ct1d;
+    Object *obj;
     uint32_t offset, length;
+    uint64_t lsa_size;
+    bool is_type1 = false;
+
+    /* Get the owner object from the MemoryRegion to avoid invalid pointer issues */
+    obj = memory_region_owner(&cxl_dstate->device);
+    if (!obj) {
+        return CXL_MBOX_INTERNAL_ERROR;
+    }
+
+    /* Check if this is a Type3 device */
+    if (object_dynamic_cast(obj, TYPE_CXL_TYPE3)) {
+        ct3d = CXL_TYPE3(obj);
+    } else if (object_dynamic_cast(obj, TYPE_CXL_TYPE1)) {
+        /* It's a Type1 device */
+        ct1d = CXL_TYPE1(obj);
+        is_type1 = true;
+    } else {
+        /* Unknown device type */
+        return CXL_MBOX_INTERNAL_ERROR;
+    }
 
     get_lsa = (void *)cmd->payload;
     offset = get_lsa->offset;
     length = get_lsa->length;
 
-    if (offset + length > cvc->get_lsa_size(ct3d)) {
-        *len = 0;
-        return CXL_MBOX_INVALID_INPUT;
+    /* Get LSA size based on device type */
+    if (is_type1) {
+        CXLType1Class *ct1c = CXL_TYPE1_GET_CLASS(ct1d);
+        lsa_size = ct1c->get_lsa_size(ct1d);
+        if (offset + length > lsa_size) {
+            *len = 0;
+            return CXL_MBOX_INVALID_INPUT;
+        }
+        *len = ct1c->get_lsa(ct1d, get_lsa, length, offset);
+    } else {
+        CXLType3Class *cvc = CXL_TYPE3_GET_CLASS(ct3d);
+        lsa_size = cvc->get_lsa_size(ct3d);
+        if (offset + length > lsa_size) {
+            *len = 0;
+            return CXL_MBOX_INVALID_INPUT;
+        }
+        *len = cvc->get_lsa(ct3d, get_lsa, length, offset);
     }
 
-    *len = cvc->get_lsa(ct3d, get_lsa, length, offset);
     return CXL_MBOX_SUCCESS;
 }
 
@@ -370,22 +435,56 @@ static ret_code cmd_ccls_set_lsa(struct cxl_cmd *cmd,
         uint8_t data[];
     } QEMU_PACKED;
     struct set_lsa_pl *set_lsa_payload = (void *)cmd->payload;
-    CXLType3Dev *ct3d = container_of(cxl_dstate, CXLType3Dev, cxl_dstate);
-    CXLType3Class *cvc = CXL_TYPE3_GET_CLASS(ct3d);
+    CXLType3Dev *ct3d;
+    CXLType1Dev *ct1d;
+    Object *obj;
     const size_t hdr_len = offsetof(struct set_lsa_pl, data);
     uint16_t plen = *len;
+    uint64_t lsa_size;
+    bool is_type1 = false;
 
     *len = 0;
     if (!plen) {
         return CXL_MBOX_SUCCESS;
     }
 
-    if (set_lsa_payload->offset + plen > cvc->get_lsa_size(ct3d) + hdr_len) {
-        return CXL_MBOX_INVALID_INPUT;
+    /* Get the owner object from the MemoryRegion to avoid invalid pointer issues */
+    obj = memory_region_owner(&cxl_dstate->device);
+    if (!obj) {
+        return CXL_MBOX_INTERNAL_ERROR;
     }
-    plen -= hdr_len;
 
-    cvc->set_lsa(ct3d, set_lsa_payload->data, plen, set_lsa_payload->offset);
+    /* Check if this is a Type3 device */
+    if (object_dynamic_cast(obj, TYPE_CXL_TYPE3)) {
+        ct3d = CXL_TYPE3(obj);
+    } else if (object_dynamic_cast(obj, TYPE_CXL_TYPE1)) {
+        /* It's a Type1 device */
+        ct1d = CXL_TYPE1(obj);
+        is_type1 = true;
+    } else {
+        /* Unknown device type */
+        return CXL_MBOX_INTERNAL_ERROR;
+    }
+
+    /* Get LSA size and perform set based on device type */
+    if (is_type1) {
+        CXLType1Class *ct1c = CXL_TYPE1_GET_CLASS(ct1d);
+        lsa_size = ct1c->get_lsa_size(ct1d);
+        if (set_lsa_payload->offset + plen > lsa_size + hdr_len) {
+            return CXL_MBOX_INVALID_INPUT;
+        }
+        plen -= hdr_len;
+        ct1c->set_lsa(ct1d, set_lsa_payload->data, plen, set_lsa_payload->offset);
+    } else {
+        CXLType3Class *cvc = CXL_TYPE3_GET_CLASS(ct3d);
+        lsa_size = cvc->get_lsa_size(ct3d);
+        if (set_lsa_payload->offset + plen > lsa_size + hdr_len) {
+            return CXL_MBOX_INVALID_INPUT;
+        }
+        plen -= hdr_len;
+        cvc->set_lsa(ct3d, set_lsa_payload->data, plen, set_lsa_payload->offset);
+    }
+
     return CXL_MBOX_SUCCESS;
 }
 
