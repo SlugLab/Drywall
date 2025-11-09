@@ -19,6 +19,7 @@
 #include "hw/cxl/cxl.h"
 #include "hw/cxl/cxl_device.h"
 #include "hw/cxl/cxl_cache_coherency.h"
+#include "hw/cxl/cxl_crypto_guard.h"
 #include "exec/memory.h"
 #include "exec/memop.h"
 
@@ -43,6 +44,9 @@ typedef struct CXLCacheCoherencyState {
     QLIST_HEAD(, CXLCachePage) tracked_pages;
     bool device_online;
     QemuMutex lock;
+
+    /* Crypto guard extension */
+    CXLCryptoGuardState *crypto_guard;
 } CXLCacheCoherencyState;
 
 /* Get cacheline index within a page */
@@ -163,12 +167,41 @@ void cxl_cache_mark_exclusive(CXLCacheCoherencyState *state, hwaddr addr,
     int cl_idx = get_cacheline_index(addr);
     CXLCachePage *page;
     uint64_t cache_idx;
+    uint32_t device_id = (ats_flags >> 16) & 0xFFFF; /* Extract device ID from ATS */
 
     if (!state || !state->region) {
         return;
     }
 
     qemu_mutex_lock(&state->lock);
+
+    /* CRYPTO GUARD INTEGRATION: Policy check */
+    if (state->crypto_guard) {
+        CryptoPolicyDecision decision;
+
+        decision = cxl_crypto_guard_check_policy(state->crypto_guard,
+                                                  addr, device_id, ats_flags);
+
+        if (decision == POLICY_DENY_EXCLUSIVE) {
+            /* Deny exclusive access - grant Shared instead */
+            qemu_log_mask(LOG_GUEST_ERROR,
+                          "[CXL-Cache] Policy denied exclusive access for addr 0x%lx (device %u)\n",
+                          addr, device_id);
+            qemu_mutex_unlock(&state->lock);
+            return; /* Flowchart: "DENY E/M" path */
+        }
+
+        if (decision == POLICY_QUARANTINE) {
+            /* Device is quarantined - deny all access */
+            qemu_log_mask(LOG_GUEST_ERROR,
+                          "[CXL-Cache] Access denied - device %u is quarantined\n",
+                          device_id);
+            qemu_mutex_unlock(&state->lock);
+            return;
+        }
+
+        /* POLICY_ALLOW_EXCLUSIVE - proceed with shadow installation */
+    }
 
     page = cxl_cache_find_or_create_page(state, addr);
 
@@ -177,13 +210,31 @@ void cxl_cache_mark_exclusive(CXLCacheCoherencyState *state, hwaddr addr,
 
     /* Backup current cacheline data */
     hwaddr cl_offset = cl_idx * CACHELINE_SIZE;
+    uint8_t cacheline_data[CACHELINE_SIZE];
+
     if (state->hostmem_mr) {
         uint64_t *src = memory_region_get_ram_ptr(state->hostmem_mr) +
                        (addr - state->region->base);
         memcpy(&page->backup_data[cl_offset], src, CACHELINE_SIZE);
+        memcpy(cacheline_data, src, CACHELINE_SIZE);
     }
 
-    /* Update cache state */
+    /* CRYPTO GUARD INTEGRATION: Install shadow before granting exclusive */
+    if (state->crypto_guard) {
+        int ret = cxl_crypto_guard_install_shadow(state->crypto_guard,
+                                                   addr, device_id,
+                                                   cacheline_data);
+        if (ret < 0) {
+            qemu_log_mask(LOG_GUEST_ERROR,
+                          "[CXL-Cache] Failed to install shadow for addr 0x%lx\n",
+                          addr);
+            qemu_mutex_unlock(&state->lock);
+            return;
+        }
+        /* Flowchart: "Install shadow & grant" complete */
+    }
+
+    /* Update cache state - GRANT EXCLUSIVE ACCESS */
     cache_idx = (addr - state->region->base) / CACHELINE_SIZE;
     if (cache_idx < (state->region->size / CACHELINE_SIZE)) {
         CXLCache *cache = &state->region->cache[cache_idx];
@@ -261,6 +312,16 @@ void cxl_cache_device_offline(CXLCacheCoherencyState *state)
         return;
     }
 
+    /* CRYPTO GUARD: Handle device offline first (revokes shadows, recovers state) */
+    if (state->crypto_guard) {
+        cxl_crypto_guard_device_offline(state->crypto_guard);
+        /* This implements the recovery flow:
+         * - Revoke / degrade (force writeback, fence PASID/region)
+         * - Recover authoritative state (reconstruct from shadow + host log)
+         * - Resume host progress (host-owned update; audit)
+         */
+    }
+
     qemu_mutex_lock(&state->lock);
 
     state->device_online = false;
@@ -305,6 +366,11 @@ void cxl_cache_device_online(CXLCacheCoherencyState *state)
     qemu_mutex_lock(&state->lock);
     state->device_online = true;
     qemu_mutex_unlock(&state->lock);
+
+    /* CRYPTO GUARD: Notify crypto guard of device online */
+    if (state->crypto_guard) {
+        cxl_crypto_guard_device_online(state->crypto_guard);
+    }
 }
 
 /* Initialize cache coherency state */
@@ -331,6 +397,14 @@ CXLCacheCoherencyState *cxl_cache_coherency_init(CXLCacheRegion *region,
         }
     }
 
+    /* CRYPTO GUARD: Initialize crypto guard extension */
+    state->crypto_guard = cxl_crypto_guard_init(state, PROTECTION_SHADOW_REQUIRED);
+    if (!state->crypto_guard) {
+        qemu_log_mask(LOG_GUEST_ERROR,
+                      "[CXL-Cache] Warning: Crypto guard initialization failed - "
+                      "running without crypto protection\n");
+    }
+
     return state;
 }
 
@@ -341,6 +415,12 @@ void cxl_cache_coherency_cleanup(CXLCacheCoherencyState *state)
 
     if (!state) {
         return;
+    }
+
+    /* CRYPTO GUARD: Cleanup crypto guard extension first */
+    if (state->crypto_guard) {
+        cxl_crypto_guard_cleanup(state->crypto_guard);
+        state->crypto_guard = NULL;
     }
 
     /* Write back all cached data */

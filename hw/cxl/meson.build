@@ -6,6 +6,7 @@ softmmu_ss.add(when: 'CONFIG_CXL',
                    'cxl-host.c',
                    'cxl-cdat.c',
                    'cxl-cache-coherency.c',
+                   'cxl-crypto-guard.c',
                ),
                if_false: files(
                    'cxl-host-stubs.c',

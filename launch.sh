@@ -1,6 +1,6 @@
 #!/bin/bash
 
-QEMU_BINARY=./build/qemu-system-x86_64
+QEMU_BINARY=/root/Drywall/build/qemu-system-x86_64
 CXL_MEMSIM_HOST=${CXL_MEMSIM_HOST:-127.0.0.1}
 CXL_MEMSIM_PORT=${CXL_MEMSIM_PORT:-9999}
 VM_MEMORY=${VM_MEMORY:-2G}
@@ -12,7 +12,7 @@ export CXL_TRANSPORT_MODE=shm
 # Also set TCP fallback
 export CXL_MEMSIM_HOST=127.0.0.1
 export CXL_MEMSIM_PORT=9999
-execd $QEMU_BINARY \
+exec $QEMU_BINARY \
     --enable-kvm -cpu host \
     -m 16G,maxmem=32G,slots=8 \
     -smp 4 \
