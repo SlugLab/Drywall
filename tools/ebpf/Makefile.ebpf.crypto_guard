@@ -1,0 +1,92 @@
+# Makefile for CXL Crypto Guard eBPF Coprocessor
+#
+# Copyright (c) 2025 Drywall Project
+# Licensed under the GNU GPL, version 2.
+
+# Toolchain
+CLANG ?= clang
+LLVM_STRIP ?= llvm-strip
+BPFTOOL ?= bpftool
+
+# Directories
+TOOLS_DIR := ./
+EBPF_DIR := ./
+OUTPUT_DIR := $(EBPF_DIR)
+
+# Source files
+BPF_SRC := $(TOOLS_DIR)/cxl_crypto_guard.bpf.c
+BPF_OBJ := $(TOOLS_DIR)/cxl_crypto_guard.bpf.o
+BPF_SKEL := $(EBPF_DIR)/cxl_crypto_guard.bpf.skeleton.h
+
+USERSPACE_SRC := $(EBPF_DIR)/cxl_crypto_guard.c
+USERSPACE_OBJ := $(EBPF_DIR)/cxl_crypto_guard.o
+
+# Compiler flags
+CLANG_BPF_SYS_INCLUDES := $(shell $(CLANG) -v -E - </dev/null 2>&1 \
+	| sed -n '/<...> search starts here:/,/End of search list./{ s| \(/.*\)|-idirafter \1|p }')
+
+BPF_CFLAGS := -g -O2 -target bpf -D__TARGET_ARCH_x86_64 \
+	      $(CLANG_BPF_SYS_INCLUDES) \
+	      -Wall -Werror \
+	      -Wno-address-of-packed-member \
+	      -Wno-unknown-warning-option
+
+USER_CFLAGS := -Wall -Wextra -O2 -g \
+	       -I$(EBPF_DIR) \
+	       -I. \
+	       -DCONFIG_LIBBPF
+
+LDFLAGS := -lbpf -lelf -lz
+
+# Default target
+all: $(BPF_OBJ) $(BPF_SKEL)
+
+# Compile eBPF program
+$(BPF_OBJ): $(BPF_SRC)
+	@echo "Compiling eBPF program: $<"
+	$(CLANG) $(BPF_CFLAGS) -c $< -o $@
+	$(LLVM_STRIP) -g $@
+
+# Generate eBPF skeleton
+$(BPF_SKEL): $(BPF_OBJ)
+	@echo "Generating eBPF skeleton: $@"
+	$(BPFTOOL) gen skeleton $< > $@
+
+# Compile userspace control plane
+$(USERSPACE_OBJ): $(USERSPACE_SRC) $(BPF_SKEL)
+	@echo "Compiling userspace control plane: $<"
+	$(CC) $(USER_CFLAGS) -c $< -o $@
+
+# Build standalone test program (optional)
+test_crypto_guard: $(USERSPACE_OBJ)
+	@echo "Building test program"
+	$(CC) $(USER_CFLAGS) test/test_crypto_guard.c $(USERSPACE_OBJ) -o $@ $(LDFLAGS)
+
+# Clean build artifacts
+clean:
+	rm -f $(BPF_OBJ) $(BPF_SKEL) $(USERSPACE_OBJ)
+	rm -f test_crypto_guard
+
+# Install (copy to system)
+install: all
+	@echo "Installing CXL crypto guard"
+	install -d /usr/local/lib/bpf
+	install -m 644 $(BPF_OBJ) /usr/local/lib/bpf/
+	install -m 644 $(BPF_SKEL) /usr/local/include/
+
+# Verify eBPF program
+verify: $(BPF_OBJ)
+	@echo "Verifying eBPF program"
+	$(BPFTOOL) prog load $(BPF_OBJ) /sys/fs/bpf/test_crypto_guard || true
+	$(BPFTOOL) prog show name cxl_crypto || true
+	rm -f /sys/fs/bpf/test_crypto_guard
+
+# Show eBPF program info
+info: $(BPF_OBJ)
+	@echo "eBPF Program Information:"
+	@$(BPFTOOL) prog show || true
+	@echo ""
+	@echo "eBPF Maps:"
+	@$(BPFTOOL) map show || true
+
+.PHONY: all clean install verify info test_crypto_guard

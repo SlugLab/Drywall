@@ -22,3 +22,7 @@ GTAGS
 *.gcov
 passwd.txt
 *.img
+*.md
+*.txt
+*.sh
+*.o
